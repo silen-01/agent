@@ -1,10 +1,10 @@
 import { createRoot } from 'react-dom/client'
-import { LanguageProvider } from './i18n/LanguageContext.tsx'
+import { language } from "@modules";
 import App from './App.tsx'
 import './index.css'
 
 createRoot(document.getElementById("root")!).render(
-  <LanguageProvider>
+  <language.LanguageProvider>
     <App />
-  </LanguageProvider>
+  </language.LanguageProvider>
 );

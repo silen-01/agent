@@ -1,5 +1,5 @@
-import { type AgentSettings } from "../types";
-import { useLanguage } from "../i18n/LanguageContext";
+import { type AgentSettings } from "@types";
+import { language } from "@modules";
 
 const ToggleRow = ({
   label,
@@ -34,7 +34,7 @@ export const ControlsCard = ({
   settings: AgentSettings;
   onSettingsChange: (patch: Partial<Pick<AgentSettings, "microphone" | "screenShare" | "camera">>) => void;
 }) => {
-  const { t } = useLanguage();
+  const { t } = language.useLanguage();
 
   return (
     <div className="min-w-0 flex flex-col">

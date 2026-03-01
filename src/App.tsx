@@ -1,37 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 
-import { type AgentSettings } from './types';
-import { AgentCard, ControlsCard, MemoryCard, SettingsPanel } from "./components";
-import { AppHeader } from "./components/ui";
-import { useLanguage } from "./i18n/LanguageContext";
-
-const defaultSettings: AgentSettings = {
-  microphone: true,
-  screenShare: true,
-  camera: false,
-  personality: "jarvis",
-  tone: "friendly",
-  allowProfanity: false,
-  personalityPrompt: "",
-  reactionTimeoutSeconds: 30,
-  emotionality: 50,
-};
-
-const STORAGE_KEY = "agent_settings";
-
-const loadSettings = (): AgentSettings => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<AgentSettings>;
-      return { ...defaultSettings, ...parsed };
-    }
-  } catch {}
-  return defaultSettings;
-};
+import { type AgentSettings } from "@types";
+import { config, language } from "@modules";
+import { settingsStorage } from "@storages";
+import { InitialPage, components, ui, hooks } from "@views";
 
 const App = () => {
-  const [settings, setSettings] = useState<AgentSettings>(loadSettings);
+  const [settings, setSettings] = useState<AgentSettings>(settingsStorage.loadSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [memoryItems, setMemoryItems] = useState<string[]>([
     'Пользователь предпочитает тёмную тему в приложениях',
@@ -49,102 +24,34 @@ const App = () => {
     'Часто спрашивает погоду и календарь на день',
     'Предпочитает короткие подтверждения без лишних деталей',
   ]);
-  const [toast, setToast] = useState<string | null>(null);
-  const [toastExiting, setToastExiting] = useState(false);
-  const [memoryBlockHeight, setMemoryBlockHeight] = useState<number | null>(null);
-  const [isMd, setIsMd] = useState(false);
-  const leftColRef = useRef<HTMLDivElement>(null);
-  const { t } = useLanguage();
-
-  useEffect(() => {
-    const m = window.matchMedia("(min-width: 768px)");
-    setIsMd(m.matches);
-    const f = () => setIsMd(m.matches);
-    m.addEventListener("change", f);
-    return () => m.removeEventListener("change", f);
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToastExiting(true), 2000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  useEffect(() => {
-    if (!toastExiting) return;
-    const timer = setTimeout(() => {
-      setToast(null);
-      setToastExiting(false);
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [toastExiting]);
-
-  // Высота блока «Память» = высота левой колонки (Агент + Управление)
-  useEffect(() => {
-    if (memoryItems.length === 0) {
-      setMemoryBlockHeight(null);
-      return;
-    }
-    const el = leftColRef.current;
-    if (!el) return;
-    const updateHeight = () => setMemoryBlockHeight(el.offsetHeight);
-    updateHeight();
-    const ro = new ResizeObserver(updateHeight);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [memoryItems.length]);
+  const { toast, toastExiting, showToast } = hooks.useToast();
+  const { t } = language.useLanguage();
 
   return (
     <div className="min-h-screen bg-[#0B1118] text-white p-12 flex flex-col">
-      <AppHeader />
+      <ui.AppHeader />
 
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-        <div className={`w-full flex flex-col gap-6 ${memoryItems.length > 0 ? "max-w-4xl" : "max-w-2xl"}`}>
-        {/* Agent + Controls (left) | Memory (right) — высота строки задаёт только левая колонка (h-fit + min-h-0 у Memory) */}
-        <div className={`gap-6 ${memoryItems.length > 0 ? "grid grid-cols-1 md:grid-cols-2 grid-rows-[auto]" : "flex flex-col"}`}>
-        <div ref={leftColRef} className={`min-w-0 flex flex-col gap-6 ${memoryItems.length > 0 ? "md:h-fit" : ""}`}>
-          <AgentCard settings={settings} onOpenSettings={() => setIsSettingsOpen(true)} />
-          <ControlsCard
-            settings={settings}
-            onSettingsChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
-          />
-        </div>
-
-        {memoryItems.length > 0 && (
-          <MemoryCard
-            items={memoryItems}
-            onClear={() => {
-              setMemoryItems([]);
-              setToast(t("memoryCleared"));
-            }}
-            height={memoryBlockHeight}
-            isMd={isMd}
-          />
-        )}
-        </div>
-
-        {/* Кнопка Launch — под сеткой, блок памяти до неё не доходит */}
-        <div className="flex justify-center">
-          <button
-            type="button"
-            className="w-1/2 min-w-[140px] py-3 px-4 rounded-xl font-medium bg-blue-500 hover:bg-blue-600 text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
-          >
-            {t("launchAgent")}
-          </button>
-        </div>
-        </div>
-      </div>
+      <InitialPage
+        settings={settings}
+        setSettings={setSettings}
+        memoryItems={memoryItems}
+        onClearMemory={() => {
+          setMemoryItems([]);
+          showToast(t("memoryCleared"));
+        }}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
 
       {isSettingsOpen && (
-        <SettingsPanel
+        <components.SettingsPanel
           settings={settings}
-          defaultSettings={defaultSettings}
+          defaultSettings={config.agentSettings.default}
           onClose={() => setIsSettingsOpen(false)}
           onSave={(newSettings: AgentSettings) => {
             setSettings(newSettings);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
+            settingsStorage.saveSettings(newSettings);
             setIsSettingsOpen(false);
-            setToast(t("settingsSaved"));
+            showToast(t("settingsSaved"));
           }}
         />
       )}

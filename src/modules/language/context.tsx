@@ -1,15 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
-import { translations, type Lang, type TranslationKey } from "./translations";
-
-const STORAGE_KEY = "agent_lang";
-
-const getStoredLang = (): Lang => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "ru" || stored === "en") return stored;
-  } catch {}
-  return "en";
-};
+import { config } from "@modules/config.ts";
+import { translations, type Lang, type TranslationKey } from "./translations.ts";
 
 type LanguageContextValue = {
   lang: Lang;
@@ -20,12 +11,12 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [lang, setLangState] = useState<Lang>(getStoredLang);
+  const [lang, setLangState] = useState<Lang>("ru");
 
   const setLang = useCallback((newLang: Lang) => {
     setLangState(newLang);
     try {
-      localStorage.setItem(STORAGE_KEY, newLang);
+      localStorage.setItem(config.language.storageKey, newLang);
     } catch {}
   }, []);
 

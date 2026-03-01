@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import { useLanguage } from "../i18n/LanguageContext";
+import { language } from "@modules";
 
 export type MemoryCardProps = {
   items: string[];
@@ -9,7 +9,7 @@ export type MemoryCardProps = {
 };
 
 export const MemoryCard = ({ items, onClear, height, isMd }: MemoryCardProps) => {
-  const { t } = useLanguage();
+  const { t } = language.useLanguage();
 
   return (
     <div

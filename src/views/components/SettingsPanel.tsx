@@ -1,9 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 
-import { type AgentSettings, type PersonalityId, type Tone } from "../types";
-import { useLanguage } from "../i18n/LanguageContext";
-import type { TranslationKey } from "../i18n/translations";
-import { CustomSelect } from "./ui";
+import { type AgentSettings, type PersonalityId, type Tone } from "@types";
+import { language } from "@modules";
+import { CustomSelect } from "../ui";
 
 const CLOSE_ANIMATION_MS = 200;
 
@@ -27,7 +26,7 @@ export const SettingsPanel = ({
 }) => {
   const [localSettings, setLocalSettings] = useState(settings);
   const [isClosing, setIsClosing] = useState(false);
-  const { t } = useLanguage();
+  const { t } = language.useLanguage();
 
   const runCloseAnimation = useCallback((callback: () => void) => {
     setIsClosing(true);
@@ -42,10 +41,10 @@ export const SettingsPanel = ({
     return () => window.removeEventListener("keydown", handleEscape);
   }, [isClosing, runCloseAnimation, onClose]);
 
-  const personalityKey = (id: PersonalityId): TranslationKey =>
-    `personality${id.charAt(0).toUpperCase() + id.slice(1)}` as TranslationKey;
-  const toneKey = (tone: Tone): TranslationKey =>
-    `tone${tone.charAt(0).toUpperCase() + tone.slice(1)}` as TranslationKey;
+  const personalityKey = (id: PersonalityId): language.TranslationKey =>
+    `personality${id.charAt(0).toUpperCase() + id.slice(1)}` as language.TranslationKey;
+  const toneKey = (tone: Tone): language.TranslationKey =>
+    `tone${tone.charAt(0).toUpperCase() + tone.slice(1)}` as language.TranslationKey;
 
   const handleOverlayClick = () => {
     if (!isClosing) runCloseAnimation(onClose);
