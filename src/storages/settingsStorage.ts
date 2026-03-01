@@ -1,7 +1,7 @@
 import type { AgentSettings } from "@types";
 import { config } from "@modules/config.ts";
 
-export function loadSettings(): AgentSettings {
+export const loadSettings = (): AgentSettings => {
   try {
     const saved = localStorage.getItem(config.agentSettings.storageKey);
     if (saved) {
@@ -10,10 +10,10 @@ export function loadSettings(): AgentSettings {
     }
   } catch {}
   return { ...config.agentSettings.default };
-}
+};
 
-export function saveSettings(settings: AgentSettings): void {
+export const saveSettings = (settings: AgentSettings): void => {
   try {
     localStorage.setItem(config.agentSettings.storageKey, JSON.stringify(settings));
   } catch {}
-}
+};
