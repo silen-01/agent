@@ -10,17 +10,17 @@ type CustomSelectProps = {
   "aria-label"?: string;
 };
 
-export function CustomSelect(props: CustomSelectProps) {
+export const CustomSelect = (props: CustomSelectProps) => {
   const { value, options, getOptionLabel, onChange, id, "aria-label": ariaLabel } = props;
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    const handleClickOutside = (e: MouseEvent) => {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
-    }
+    };
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -93,4 +93,4 @@ export function CustomSelect(props: CustomSelectProps) {
       )}
     </div>
   );
-}
+};

@@ -3,13 +3,13 @@ import { translations, type Lang, type TranslationKey } from "./translations";
 
 const STORAGE_KEY = "agent_lang";
 
-function getStoredLang(): Lang {
+const getStoredLang = (): Lang => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "ru" || stored === "en") return stored;
   } catch {}
   return "en";
-}
+};
 
 type LanguageContextValue = {
   lang: Lang;
@@ -19,7 +19,7 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(getStoredLang);
 
   const setLang = useCallback((newLang: Lang) => {
@@ -44,10 +44,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       {children}
     </LanguageContext.Provider>
   );
-}
+};
 
-export function useLanguage() {
+export const useLanguage = () => {
   const ctx = useContext(LanguageContext);
   if (!ctx) throw new Error("useLanguage must be used within LanguageProvider");
   return ctx;
-}
+};

@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { type AgentSettings, type PersonalityId, type Tone } from "../types";
 import { useLanguage } from "../i18n/LanguageContext";
 import type { TranslationKey } from "../i18n/translations";
-import { CustomSelect } from "./CustomSelect";
+import { CustomSelect } from "./ui";
 
 const CLOSE_ANIMATION_MS = 200;
 
