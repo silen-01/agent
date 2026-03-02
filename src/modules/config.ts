@@ -1,6 +1,11 @@
 import type { AgentSettings } from "@types";
 
 export type Config = {
+  appVersion: string;
+  /** Доступность элементов управления (один источник правды для UI) */
+  controls: {
+    cameraEnabled: boolean;
+  };
   agentSettings: {
     storageKey: string;
     default: AgentSettings;
@@ -15,6 +20,10 @@ export type Config = {
 };
 
 export const config: Config = {
+  appVersion: typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0",
+  controls: {
+    cameraEnabled: false,
+  },
   agentSettings: {
     storageKey: "agent_settings",
     default: {

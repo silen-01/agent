@@ -3,11 +3,12 @@ import { useState } from "react";
 import { type AgentSettings } from "@types";
 import { config, language } from "@modules";
 import { settingsStorage } from "@storages";
-import { InitialPage, components, ui, hooks } from "@views";
+import { InitialPage, AgentSessionPage, components, ui, hooks } from "@views";
 
 const App = () => {
   const [settings, setSettings] = useState<AgentSettings>(settingsStorage.loadSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLaunched, setIsLaunched] = useState(false);
   const [memoryItems, setMemoryItems] = useState<string[]>([
     'Пользователь предпочитает тёмную тему в приложениях',
     'Последняя команда: открыть браузер на вкладке почты',
@@ -28,19 +29,43 @@ const App = () => {
   const { t } = language.useLanguage();
 
   return (
-    <div className="min-h-screen bg-[#0B1118] text-white p-12 flex flex-col">
+    <div className="min-h-screen bg-[#0B1118] text-white px-12 pt-12 pb-4 flex flex-col">
       <ui.AppHeader />
 
-      <InitialPage
-        settings={settings}
-        setSettings={setSettings}
-        memoryItems={memoryItems}
-        onClearMemory={() => {
-          setMemoryItems([]);
-          showToast(t("memoryCleared"));
-        }}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-      />
+      <div className="flex-1 min-h-0 relative flex flex-col">
+        <InitialPage
+          settings={settings}
+          setSettings={setSettings}
+          memoryItems={memoryItems}
+          isLaunched={isLaunched}
+          onLaunch={() => {
+            setIsLaunched(true);
+            // TODO: бек — запуск агента
+          }}
+          onClearMemory={() => {
+            setMemoryItems([]);
+            showToast(t("memoryCleared"));
+          }}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+        {isLaunched && (
+          <div className="absolute inset-0 flex flex-col session-page-in">
+            <AgentSessionPage
+              memoryItems={memoryItems}
+              initialMicOn={settings.microphone}
+              initialScreenSharing={settings.screenShare}
+              onBack={() => setIsLaunched(false)}
+              onClearMemory={() => {
+                setMemoryItems([]);
+                showToast(t("memoryCleared"));
+              }}
+              onRemoveMemoryItem={(index) => {
+                setMemoryItems((prev) => prev.filter((_, i) => i !== index));
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       {isSettingsOpen && (
         <components.SettingsPanel

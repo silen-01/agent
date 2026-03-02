@@ -1,22 +1,38 @@
 import { type AgentSettings } from "@types";
-import { language } from "@modules";
+import { language, config } from "@modules";
 
 const ToggleRow = ({
   label,
   value,
   onChange,
+  disabled,
+  hint,
 }: {
   label: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
+  hint?: string;
 }) => (
-  <div className="flex justify-between items-center">
-    <span>{label}</span>
+  <div className={`flex justify-between items-center gap-2 ${disabled ? "opacity-60" : ""}`}>
+    <div className="flex flex-col gap-0.5 min-w-0">
+      <span>{label}</span>
+      {disabled && hint != null && (
+        <span className="text-xs text-gray-500">{hint}</span>
+      )}
+    </div>
     <button
-      onClick={() => onChange(!value)}
-      className={`w-12 h-6 rounded-full transition ${
-        value ? "bg-blue-500" : "bg-gray-600"
+      type="button"
+      onClick={() => !disabled && onChange(!value)}
+      disabled={disabled}
+      className={`w-12 h-6 rounded-full transition shrink-0 ${
+        disabled
+          ? "bg-gray-700 cursor-not-allowed"
+          : value
+            ? "bg-blue-500"
+            : "bg-gray-600"
       }`}
+      title={disabled ? hint : undefined}
     >
       <div
         className={`w-5 h-5 bg-white rounded-full transform transition ${
@@ -55,6 +71,8 @@ export const ControlsCard = ({
             label={t("camera")}
             value={settings.camera}
             onChange={(v) => onSettingsChange({ camera: v })}
+            disabled={!config.controls.cameraEnabled}
+            hint={!config.controls.cameraEnabled ? t("controlsCameraUnavailable") : undefined}
           />
         </div>
       </div>
