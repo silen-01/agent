@@ -20,21 +20,20 @@ export type AgentSessionPageProps = {
   onBack?: () => void;
 };
 
-/** Высота нижней панели (тулбар + статус-бар + отступы), чтобы окна были над нею */
-const BOTTOM_PANEL_OFFSET_PX = 120;
-
 function getDefaultDialogPos() {
+  const offset = config.session.bottomPanelOffsetPx;
   if (typeof window === "undefined") return { x: 24, y: 200 };
   return {
     x: 24,
-    y: window.innerHeight - 18 * 16 - BOTTOM_PANEL_OFFSET_PX, // слева снизу, над панелью
+    y: window.innerHeight - 18 * 16 - offset,
   };
 }
 function getDefaultMemoryPos() {
+  const offset = config.session.bottomPanelOffsetPx;
   if (typeof window === "undefined") return { x: 400, y: 200 };
   return {
     x: window.innerWidth - 20 * 16 - 24,
-    y: window.innerHeight - 16 * 16 - BOTTOM_PANEL_OFFSET_PX, // справа снизу, над панелью
+    y: window.innerHeight - 16 * 16 - offset,
   };
 }
 
@@ -84,7 +83,7 @@ export const AgentSessionPage = ({
           }}
           sizePx={dialogSize}
           onResize={onDialogResize}
-          bottomSafeAreaPx={BOTTOM_PANEL_OFFSET_PX}
+          bottomSafeAreaPx={config.session.bottomPanelOffsetPx}
           otherPanelBounds={memoryVisible ? { x: memoryPosition.x, y: memoryPosition.y, width: memorySize.width, height: memorySize.height } : null}
           closeRequested={dialogCloseRequested}
         >
@@ -102,7 +101,7 @@ export const AgentSessionPage = ({
           }}
           sizePx={memorySize}
           onResize={onMemoryResize}
-          bottomSafeAreaPx={BOTTOM_PANEL_OFFSET_PX}
+          bottomSafeAreaPx={config.session.bottomPanelOffsetPx}
           otherPanelBounds={dialogVisible ? { x: dialogPosition.x, y: dialogPosition.y, width: dialogSize.width, height: dialogSize.height } : null}
           closeRequested={memoryCloseRequested}
         >

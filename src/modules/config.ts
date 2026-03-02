@@ -6,6 +6,24 @@ export type Config = {
   controls: {
     cameraEnabled: boolean;
   };
+  /** Страница сессии: плавающие окна и нижняя панель */
+  session: {
+    /** Высота нижней панели (тулбар + статус-бар + отступы), px */
+    bottomPanelOffsetPx: number;
+  };
+  /** Плавающие панели (диалог, память) */
+  draggablePanel: {
+    paddingPx: number;
+    gapPx: number;
+    defaultMinWidthPx: number;
+    defaultMinHeightPx: number;
+  };
+  /** Панель настроек */
+  settingsPanel: {
+    closeAnimationMs: number;
+    reactionTimeout: { min: number; max: number };
+    emotionality: { min: number; max: number };
+  };
   agentSettings: {
     storageKey: string;
     default: AgentSettings;
@@ -23,6 +41,20 @@ export const config: Config = {
   appVersion: typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.0.0",
   controls: {
     cameraEnabled: false,
+  },
+  session: {
+    bottomPanelOffsetPx: 120,
+  },
+  draggablePanel: {
+    paddingPx: 8,
+    gapPx: 12,
+    defaultMinWidthPx: 200,
+    defaultMinHeightPx: 120,
+  },
+  settingsPanel: {
+    closeAnimationMs: 200,
+    reactionTimeout: { min: 1, max: 120 },
+    emotionality: { min: 1, max: 100 },
   },
   agentSettings: {
     storageKey: "agent_settings",

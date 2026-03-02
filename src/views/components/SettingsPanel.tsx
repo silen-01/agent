@@ -1,17 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 
 import { type AgentSettings, type PersonalityId, type Tone } from "@types";
-import { language } from "@modules";
+import { language, config } from "@modules";
 import { CustomSelect } from "../ui";
-
-const CLOSE_ANIMATION_MS = 200;
 
 const PERSONALITY_IDS: PersonalityId[] = ["jarvis", "assistant", "custom"];
 const TONE_OPTIONS: Tone[] = ["friendly", "neutral", "aggressive"];
-const REACTION_TIMEOUT_MIN = 1;
-const REACTION_TIMEOUT_MAX = 120;
-const EMOTIONALITY_MIN = 1;
-const EMOTIONALITY_MAX = 100;
 
 export const SettingsPanel = ({
   settings,
@@ -30,7 +24,7 @@ export const SettingsPanel = ({
 
   const runCloseAnimation = useCallback((callback: () => void) => {
     setIsClosing(true);
-    setTimeout(callback, CLOSE_ANIMATION_MS);
+    setTimeout(callback, config.settingsPanel.closeAnimationMs);
   }, []);
 
   useEffect(() => {
@@ -162,8 +156,8 @@ export const SettingsPanel = ({
           <p className="text-xs text-gray-500 mb-2">{t("reactionTimeoutHint")}</p>
           <input
             type="range"
-            min={REACTION_TIMEOUT_MIN}
-            max={REACTION_TIMEOUT_MAX}
+            min={config.settingsPanel.reactionTimeout.min}
+            max={config.settingsPanel.reactionTimeout.max}
             value={localSettings.reactionTimeoutSeconds}
             onChange={(e) =>
               setLocalSettings({
@@ -187,8 +181,8 @@ export const SettingsPanel = ({
           </div>
           <input
             type="range"
-            min={EMOTIONALITY_MIN}
-            max={EMOTIONALITY_MAX}
+            min={config.settingsPanel.emotionality.min}
+            max={config.settingsPanel.emotionality.max}
             value={localSettings.emotionality}
             onChange={(e) =>
               setLocalSettings({

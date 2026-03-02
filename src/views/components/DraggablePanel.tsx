@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { Minimize2 } from "lucide-react";
+import { config } from "@modules";
 
 export type DraggablePanelProps = {
   title: string;
@@ -23,12 +24,6 @@ export type DraggablePanelProps = {
   className?: string;
 };
 
-const PADDING = 8;
-const GAP = 12;
-const DEFAULT_BOTTOM_SAFE = 120;
-const DEFAULT_MIN_W = 200;
-const DEFAULT_MIN_H = 120;
-
 export const DraggablePanel = ({
   title,
   position,
@@ -37,9 +32,9 @@ export const DraggablePanel = ({
   children,
   sizePx,
   onResize,
-  minWidthPx = DEFAULT_MIN_W,
-  minHeightPx = DEFAULT_MIN_H,
-  bottomSafeAreaPx = DEFAULT_BOTTOM_SAFE,
+  minWidthPx = config.draggablePanel.defaultMinWidthPx,
+  minHeightPx = config.draggablePanel.defaultMinHeightPx,
+  bottomSafeAreaPx = config.session.bottomPanelOffsetPx,
   otherPanelBounds = null,
   closeRequested = false,
   className = "",
@@ -56,12 +51,15 @@ export const DraggablePanel = ({
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const isResizingRef = useRef(false);
 
+  const padding = config.draggablePanel.paddingPx;
+  const gap = config.draggablePanel.gapPx;
+
   const clampPosition = useCallback(
     (x: number, y: number) => {
-      let maxX = Math.max(0, window.innerWidth - widthPx - PADDING);
+      let maxX = Math.max(0, window.innerWidth - widthPx - padding);
       let maxY = Math.max(0, window.innerHeight - bottomSafeAreaPx - heightPx);
-      let x1 = Math.max(PADDING, Math.min(maxX, x));
-      let y1 = Math.max(PADDING, Math.min(maxY, y));
+      let x1 = Math.max(padding, Math.min(maxX, x));
+      let y1 = Math.max(padding, Math.min(maxY, y));
 
       if (otherPanelBounds) {
         const o = otherPanelBounds;
@@ -69,14 +67,13 @@ export const DraggablePanel = ({
         const ourBottom = y1 + heightPx;
         const oRight = o.x + o.width;
         const oBottom = o.y + o.height;
-        const overlapX = x1 < oRight + GAP && ourRight > o.x - GAP;
-        const overlapY = y1 < oBottom + GAP && ourBottom > o.y - GAP;
-        // Сдвигаем только при реальном пересечении (по обеим осям). Тогда сдвигаем по одной оси — по той, где смещение меньше (чтобы можно было ставить окна рядом по вертикали или горизонтали).
+        const overlapX = x1 < oRight + gap && ourRight > o.x - gap;
+        const overlapY = y1 < oBottom + gap && ourBottom > o.y - gap;
         if (overlapX && overlapY) {
-          const putLeft = o.x - GAP - widthPx;
-          const putRight = oRight + GAP;
-          const putTop = o.y - GAP - heightPx;
-          const putBottom = oBottom + GAP;
+          const putLeft = o.x - gap - widthPx;
+          const putRight = oRight + gap;
+          const putTop = o.y - gap - heightPx;
+          const putBottom = oBottom + gap;
           const distLeft = Math.abs(x1 - putLeft);
           const distRight = Math.abs(x1 - putRight);
           const distTop = Math.abs(y1 - putTop);
@@ -86,9 +83,9 @@ export const DraggablePanel = ({
           const costX = Math.min(distLeft, distRight);
           const costY = Math.min(distTop, distBottom);
           if (costX <= costY) {
-            x1 = Math.max(PADDING, Math.min(maxX, bestX));
+            x1 = Math.max(padding, Math.min(maxX, bestX));
           } else {
-            y1 = Math.max(PADDING, Math.min(maxY, bestY));
+            y1 = Math.max(padding, Math.min(maxY, bestY));
           }
         }
       }
@@ -119,8 +116,8 @@ export const DraggablePanel = ({
       if (isResizingRef.current && onResize) {
         const dw = e.clientX - resizeStart.current.x;
         const dh = e.clientY - resizeStart.current.y;
-        const maxW = window.innerWidth - position.x - PADDING;
-        const maxH = window.innerHeight - position.y - bottomSafeAreaPx - PADDING;
+        const maxW = window.innerWidth - position.x - padding;
+        const maxH = window.innerHeight - position.y - bottomSafeAreaPx - padding;
         const newW = Math.max(minWidthPx, Math.min(maxW, resizeStart.current.w + dw));
         const newH = Math.max(minHeightPx, Math.min(maxH, resizeStart.current.h + dh));
         onResize({ width: newW, height: newH });
