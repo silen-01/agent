@@ -210,7 +210,15 @@ export const SettingsPanel = ({
         <div className="flex justify-between items-center gap-3 pt-4 border-t border-gray-700/80">
           <button
             type="button"
-            onClick={() => setLocalSettings({ ...defaultSettings })}
+            onClick={() => {
+              const personalityPrompt = getPersonalityByLang(
+                constants.personalities,
+                constants.language.defaultLang,
+                defaultSettings.personality,
+                lang
+              ).prompt;
+              setLocalSettings({ ...defaultSettings, personalityPrompt });
+            }}
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
             {t("resetToDefaults")}
