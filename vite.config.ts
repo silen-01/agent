@@ -18,7 +18,7 @@ export default defineConfig({
       "@modules": path.resolve(__dirname, "src/modules"),
       "@storages": path.resolve(__dirname, "src/storages"),
       "@views": path.resolve(__dirname, "src/views"),
-      "@types": path.resolve(__dirname, "src/types"),
+      "@types": path.resolve(__dirname, "src/views/types"),
     },
   },
 });

@@ -25,6 +25,9 @@ export const translations = {
     camera: "Camera",
     controlsCameraUnavailable: "Unavailable",
     launchAgent: "Launch",
+    launchConnecting: "Connecting…",
+    connectionErrorNoKey: "API key not set. Add VITE_GEMINI_API_KEY to .env",
+    connectionErrorGeneric: "Connection failed. Try again.",
     clearAgentMemory: "Clear agent memory",
     memoryTitle: "AI memory",
     memoryEmpty: "Nothing saved yet",
@@ -66,6 +69,15 @@ export const translations = {
     sessionToolbarBack: "Back to start",
     sessionMemoryRemove: "Remove from memory",
     sessionAiVolume: "AI volume",
+
+    /** System instruction strings (language = user-selected) */
+    sysInstructionToneFriendly: "Friendly tone.",
+    sysInstructionToneNeutral: "Neutral tone.",
+    sysInstructionToneAggressive: "Brief, direct tone.",
+    sysInstructionProfanityAllowed: "Profanity in responses is allowed.",
+    sysInstructionProfanityDisabled: "Profanity in responses is not allowed.",
+    sysInstructionReaction: "Auto-reaction delay: {seconds} sec. Emotionality: {emotionality}/100.",
+    sysInstructionMemory: "User memory: {items}",
   },
   ru: {
     appTitle: "AI Assistant",
@@ -91,6 +103,9 @@ export const translations = {
     camera: "Камера",
     controlsCameraUnavailable: "Недоступно",
     launchAgent: "Запуск",
+    launchConnecting: "Подключение…",
+    connectionErrorNoKey: "API ключ не задан. Добавьте VITE_GEMINI_API_KEY в .env",
+    connectionErrorGeneric: "Не удалось подключиться. Попробуйте снова.",
     clearAgentMemory: "Очистить память агента",
     memoryTitle: "Память ИИ",
     memoryEmpty: "Пока ничего не сохранено",
@@ -132,6 +147,15 @@ export const translations = {
     sessionToolbarBack: "Вернуться на главную",
     sessionMemoryRemove: "Удалить из памяти",
     sessionAiVolume: "Громкость ИИ",
+
+    /** System instruction strings (language = user-selected) */
+    sysInstructionToneFriendly: "Дружелюбный тон.",
+    sysInstructionToneNeutral: "Нейтральный тон.",
+    sysInstructionToneAggressive: "Краткий, прямой тон.",
+    sysInstructionProfanityAllowed: "Мат в ответах разрешён.",
+    sysInstructionProfanityDisabled: "Мат в ответах запрещён.",
+    sysInstructionReaction: "Задержка авто-реакции: {seconds} сек. Эмоциональность: {emotionality}/100.",
+    sysInstructionMemory: "Память о пользователе: {items}",
   },
 } as const;
 

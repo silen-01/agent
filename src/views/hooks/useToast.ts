@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { config } from "@modules/config.ts";
+import { constants } from "@modules";
 
 export const useToast = () => {
   const [toast, setToast] = useState<string | null>(null);
@@ -8,7 +8,7 @@ export const useToast = () => {
   useEffect(() => {
     if (!toast) return;
     setToastExiting(false);
-    const timer = setTimeout(() => setToastExiting(true), config.toast.visibleMs);
+    const timer = setTimeout(() => setToastExiting(true), constants.toast.visibleMs);
     return () => clearTimeout(timer);
   }, [toast]);
 
@@ -17,7 +17,7 @@ export const useToast = () => {
     const timer = setTimeout(() => {
       setToast(null);
       setToastExiting(false);
-    }, config.toast.exitMs);
+    }, constants.toast.exitMs);
     return () => clearTimeout(timer);
   }, [toastExiting]);
 

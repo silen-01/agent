@@ -1,10 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 
-import { type AgentSettings, type PersonalityId, type Tone } from "@types";
-import { language, config } from "@modules";
+import { type AgentSettings, type Tone } from "@types";
+import { getPersonalityByLang, language, constants } from "@modules";
 import { CustomSelect } from "../ui";
 
-const PERSONALITY_IDS: PersonalityId[] = ["jarvis", "assistant", "custom"];
 const TONE_OPTIONS: Tone[] = ["friendly", "neutral", "aggressive"];
 
 export const SettingsPanel = ({
@@ -20,11 +19,14 @@ export const SettingsPanel = ({
 }) => {
   const [localSettings, setLocalSettings] = useState(settings);
   const [isClosing, setIsClosing] = useState(false);
-  const { t } = language.useLanguage();
+  const { t, lang } = language.useLanguage();
+
+  const getPersonalityName = (id: string) => getPersonalityByLang(constants.personalities, constants.language.defaultLang, id, lang).name;
+  const getPersonalityPrompt = (id: string) => getPersonalityByLang(constants.personalities, constants.language.defaultLang, id, lang).prompt;
 
   const runCloseAnimation = useCallback((callback: () => void) => {
     setIsClosing(true);
-    setTimeout(callback, config.settingsPanel.closeAnimationMs);
+    setTimeout(callback, constants.settingsPanel.closeAnimationMs);
   }, []);
 
   useEffect(() => {
@@ -35,8 +37,15 @@ export const SettingsPanel = ({
     return () => window.removeEventListener("keydown", handleEscape);
   }, [isClosing, runCloseAnimation, onClose]);
 
-  const personalityKey = (id: PersonalityId): language.TranslationKey =>
-    `personality${id.charAt(0).toUpperCase() + id.slice(1)}` as language.TranslationKey;
+  // При открытии панели: если поле «точная настройка» пустое — подставить промпт выбранной личности по текущему языку
+  useEffect(() => {
+    setLocalSettings((prev) => {
+      if (prev.personalityPrompt.trim()) return prev;
+      const prompt = getPersonalityByLang(constants.personalities, constants.language.defaultLang, prev.personality, lang).prompt;
+      return { ...prev, personalityPrompt: prompt };
+    });
+  }, [settings.personality, settings.personalityPrompt, lang]);
+
   const toneKey = (tone: Tone): language.TranslationKey =>
     `tone${tone.charAt(0).toUpperCase() + tone.slice(1)}` as language.TranslationKey;
 
@@ -74,10 +83,14 @@ export const SettingsPanel = ({
           </label>
           <CustomSelect
             value={localSettings.personality}
-            options={PERSONALITY_IDS}
-            getOptionLabel={(id) => t(personalityKey(id as PersonalityId))}
-            onChange={(personality) =>
-              setLocalSettings({ ...localSettings, personality: personality as PersonalityId })
+            options={constants.personalities.map((p) => p.id)}
+            getOptionLabel={getPersonalityName}
+            onChange={(personalityId) =>
+              setLocalSettings({
+                ...localSettings,
+                personality: personalityId,
+                personalityPrompt: getPersonalityPrompt(personalityId),
+              })
             }
             aria-label={t("personalityLabel")}
           />
@@ -156,8 +169,8 @@ export const SettingsPanel = ({
           <p className="text-xs text-gray-500 mb-2">{t("reactionTimeoutHint")}</p>
           <input
             type="range"
-            min={config.settingsPanel.reactionTimeout.min}
-            max={config.settingsPanel.reactionTimeout.max}
+            min={constants.settingsPanel.reactionTimeout.min}
+            max={constants.settingsPanel.reactionTimeout.max}
             value={localSettings.reactionTimeoutSeconds}
             onChange={(e) =>
               setLocalSettings({
@@ -181,8 +194,8 @@ export const SettingsPanel = ({
           </div>
           <input
             type="range"
-            min={config.settingsPanel.emotionality.min}
-            max={config.settingsPanel.emotionality.max}
+            min={constants.settingsPanel.emotionality.min}
+            max={constants.settingsPanel.emotionality.max}
             value={localSettings.emotionality}
             onChange={(e) =>
               setLocalSettings({

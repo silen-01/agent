@@ -1,6 +1,7 @@
 import { useRef } from "react";
 
 import { type AgentSettings } from "@types";
+import { settingsStorage } from "@storages";
 import { AgentCard, ControlsCard, MemoryCard } from "./components";
 import { language } from "@modules";
 import { useMemoryBlockHeight } from "./hooks";
@@ -12,6 +13,8 @@ type InitialPageProps = {
   setSettings: React.Dispatch<React.SetStateAction<AgentSettings>>;
   memoryItems: string[];
   isLaunched: boolean;
+  isConnecting?: boolean;
+  connectionError?: string | null;
   onLaunch: () => void;
   onClearMemory: () => void;
   onOpenSettings: () => void;
@@ -22,6 +25,8 @@ export const InitialPage = ({
   setSettings,
   memoryItems,
   isLaunched,
+  isConnecting = false,
+  connectionError = null,
   onLaunch,
   onClearMemory,
   onOpenSettings,
@@ -49,7 +54,13 @@ export const InitialPage = ({
             <AgentCard settings={settings} onOpenSettings={onOpenSettings} />
             <ControlsCard
               settings={settings}
-              onSettingsChange={(patch: ControlsPatch) => setSettings((prev) => ({ ...prev, ...patch }))}
+              onSettingsChange={(patch: ControlsPatch) => {
+                setSettings((prev) => {
+                  const next = { ...prev, ...patch };
+                  settingsStorage.saveSettings(next);
+                  return next;
+                });
+              }}
             />
           </div>
 
@@ -63,13 +74,19 @@ export const InitialPage = ({
           )}
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
+          {connectionError && (
+            <p className="text-sm text-red-400 text-center" role="alert">
+              {connectionError}
+            </p>
+          )}
           <button
             type="button"
             onClick={onLaunch}
-            className="w-1/2 min-w-[140px] py-3 px-4 rounded-xl font-medium bg-blue-500 hover:bg-blue-600 text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
+            disabled={isConnecting}
+            className="w-1/2 min-w-[140px] py-3 px-4 rounded-xl font-medium bg-blue-500 hover:bg-blue-600 disabled:opacity-70 disabled:pointer-events-none text-white transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
           >
-            {t("launchAgent")}
+            {isConnecting ? t("launchConnecting") : t("launchAgent")}
           </button>
         </div>
       </div>

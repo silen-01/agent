@@ -1,5 +1,6 @@
 import { type AgentSettings } from "@types";
-import { language, config } from "@modules";
+import { constants } from "@modules";
+import { language } from "@modules";
 
 const ToggleRow = ({
   label,
@@ -71,8 +72,8 @@ export const ControlsCard = ({
             label={t("camera")}
             value={settings.camera}
             onChange={(v) => onSettingsChange({ camera: v })}
-            disabled={!config.controls.cameraEnabled}
-            hint={!config.controls.cameraEnabled ? t("controlsCameraUnavailable") : undefined}
+            disabled={!constants.controls.cameraEnabled}
+            hint={!constants.controls.cameraEnabled ? t("controlsCameraUnavailable") : undefined}
           />
         </div>
       </div>

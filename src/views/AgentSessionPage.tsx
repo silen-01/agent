@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import type { ILiveSession } from "../api/index.ts";
 import {
   SessionStatusBar,
   SessionAvatar,
@@ -7,9 +8,11 @@ import {
   SessionToolbar,
   DraggablePanel,
 } from "./components";
-import { language, config } from "@modules";
+import { language, constants, config } from "@modules";
 
 export type AgentSessionPageProps = {
+  /** Активная live-сессия с ИИ (для отправки аудио/видео и приёма ответов) */
+  session: ILiveSession;
   memoryItems: string[];
   onClearMemory?: () => void;
   onRemoveMemoryItem?: (index: number) => void;
@@ -21,23 +24,24 @@ export type AgentSessionPageProps = {
 };
 
 function getDefaultDialogPos() {
-  const offset = config.session.bottomPanelOffsetPx;
-  if (typeof window === "undefined") return { x: 24, y: 200 };
+  const { bottomPanelOffsetPx, panelMarginPx, defaultDialogSizePx } = constants.session;
+  if (typeof window === "undefined") return { x: panelMarginPx, y: 200 };
   return {
-    x: 24,
-    y: window.innerHeight - 18 * 16 - offset,
+    x: panelMarginPx,
+    y: window.innerHeight - defaultDialogSizePx.height - bottomPanelOffsetPx,
   };
 }
 function getDefaultMemoryPos() {
-  const offset = config.session.bottomPanelOffsetPx;
+  const { bottomPanelOffsetPx, panelMarginPx, defaultMemorySizePx } = constants.session;
   if (typeof window === "undefined") return { x: 400, y: 200 };
   return {
-    x: window.innerWidth - 20 * 16 - 24,
-    y: window.innerHeight - 16 * 16 - offset,
+    x: window.innerWidth - defaultMemorySizePx.width - panelMarginPx,
+    y: window.innerHeight - defaultMemorySizePx.height - bottomPanelOffsetPx,
   };
 }
 
 export const AgentSessionPage = ({
+  session,
   memoryItems,
   onClearMemory,
   onRemoveMemoryItem,
@@ -52,10 +56,10 @@ export const AgentSessionPage = ({
   const [memoryVisible, setMemoryVisible] = useState(false);
   const [dialogCloseRequested, setDialogCloseRequested] = useState(false);
   const [memoryCloseRequested, setMemoryCloseRequested] = useState(false);
-  const [dialogPosition, setDialogPosition] = useState(getDefaultDialogPos);
-  const [memoryPosition, setMemoryPosition] = useState(getDefaultMemoryPos);
-  const [dialogSize, setDialogSize] = useState({ width: 22 * 16, height: 18 * 16 });
-  const [memorySize, setMemorySize] = useState({ width: 20 * 16, height: 16 * 16 });
+  const [dialogPosition, setDialogPosition] = useState<{ x: number; y: number }>(getDefaultDialogPos);
+  const [memoryPosition, setMemoryPosition] = useState<{ x: number; y: number }>(getDefaultMemoryPos);
+  const [dialogSize, setDialogSize] = useState(() => ({ ...constants.session.defaultDialogSizePx }));
+  const [memorySize, setMemorySize] = useState(() => ({ ...constants.session.defaultMemorySizePx }));
   const { t } = language.useLanguage();
   const [aiVolumePercent, setAiVolumePercent] = useState(80);
   const micLevelPercent = 70;
@@ -83,7 +87,7 @@ export const AgentSessionPage = ({
           }}
           sizePx={dialogSize}
           onResize={onDialogResize}
-          bottomSafeAreaPx={config.session.bottomPanelOffsetPx}
+          bottomSafeAreaPx={constants.session.bottomPanelOffsetPx}
           otherPanelBounds={memoryVisible ? { x: memoryPosition.x, y: memoryPosition.y, width: memorySize.width, height: memorySize.height } : null}
           closeRequested={dialogCloseRequested}
         >
@@ -101,7 +105,7 @@ export const AgentSessionPage = ({
           }}
           sizePx={memorySize}
           onResize={onMemoryResize}
-          bottomSafeAreaPx={config.session.bottomPanelOffsetPx}
+          bottomSafeAreaPx={constants.session.bottomPanelOffsetPx}
           otherPanelBounds={dialogVisible ? { x: dialogPosition.x, y: dialogPosition.y, width: dialogSize.width, height: dialogSize.height } : null}
           closeRequested={memoryCloseRequested}
         >
@@ -116,6 +120,7 @@ export const AgentSessionPage = ({
       )}
 
       <SessionToolbar
+        session={session}
         micOn={micOn}
         micLevelPercent={micLevelPercent}
         screenSharing={screenSharing}
@@ -123,7 +128,7 @@ export const AgentSessionPage = ({
         onMicToggle={() => setMicOn((v) => !v)}
         onScreenShareToggle={() => setScreenSharing((v) => !v)}
         onCameraToggle={() => setCameraOn((v) => !v)}
-        cameraDisabled={!config.controls.cameraEnabled}
+        cameraDisabled={!constants.controls.cameraEnabled}
         onBack={onBack}
       />
 

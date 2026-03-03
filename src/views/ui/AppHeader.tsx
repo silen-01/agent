@@ -1,7 +1,8 @@
-import { language } from "@modules";
+import { constants, language } from "@modules";
 
 export const AppHeader = () => {
   const { lang, setLang, t } = language.useLanguage();
+  const defaultLang = constants.language.defaultLang;
 
   return (
     <div className="flex justify-between items-center shrink-0 mb-6">
@@ -20,8 +21,8 @@ export const AppHeader = () => {
         </button>
         <button
           type="button"
-          onClick={() => setLang("ru")}
-          className={"relative z-10 flex items-center justify-center w-14 h-9 text-sm font-medium transition-colors rounded-full leading-none select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-inset " + (lang === "ru" ? "text-white" : "text-gray-400 hover:text-gray-300")}
+          onClick={() => setLang(defaultLang)}
+          className={"relative z-10 flex items-center justify-center w-14 h-9 text-sm font-medium transition-colors rounded-full leading-none select-none outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-inset " + (lang === defaultLang ? "text-white" : "text-gray-400 hover:text-gray-300")}
         >
           RU
         </button>

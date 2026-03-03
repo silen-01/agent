@@ -1,7 +1,10 @@
 import { Mic, MicOff, Monitor, MonitorOff, Video, VideoOff, LogOut } from "lucide-react";
+import type { ILiveSession } from "../../api/index.ts";
 import { language } from "@modules";
 
 export type SessionToolbarProps = {
+  /** Live-сессия с ИИ (для будущей отправки аудио/видео через sendRealtimeInput) */
+  session: ILiveSession;
   micOn: boolean;
   /** 0–100, уровень микрофона для заливки иконки снизу вверх (только при micOn) */
   micLevelPercent?: number;
@@ -17,6 +20,7 @@ export type SessionToolbarProps = {
 };
 
 export const SessionToolbar = ({
+  session: _session,
   micOn,
   micLevelPercent = 0,
   screenSharing,

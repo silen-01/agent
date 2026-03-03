@@ -1,32 +1,75 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 import { type AgentSettings } from "@types";
-import { config, language } from "@modules";
-import { settingsStorage } from "@storages";
+import { config, constants, language, buildSystemInstruction } from "@modules";
+import { memoryStorage, settingsStorage } from "@storages";
+import { createLiveClient, type ILiveSession } from "./api/index.ts";
 import { InitialPage, AgentSessionPage, components, ui, hooks } from "@views";
 
 const App = () => {
   const [settings, setSettings] = useState<AgentSettings>(settingsStorage.loadSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLaunched, setIsLaunched] = useState(false);
-  const [memoryItems, setMemoryItems] = useState<string[]>([
-    'Пользователь предпочитает тёмную тему в приложениях',
-    'Последняя команда: открыть браузер на вкладке почты',
-    'Имя в системе: Алексей',
-    'Часто использует фразу «сделай по умолчанию» для настроек',
-    'Любимый редактор — Cursor, работа в папке d:\\projets',
-    'Включена трансляция экрана при звонках',
-    'Микрофон по умолчанию включён, камера выключена',
-    'Задержка авто-реакции установлена на 30 секунд',
-    'Уровень эмоциональности: 50%',
-    'Личность агента: Джарвис, тон — дружелюбный',
-    'Мат в ответах запрещён',
-    'Рабочие часы: пн–пт 9:00–18:00, напоминать о перерывах',
-    'Часто спрашивает погоду и календарь на день',
-    'Предпочитает короткие подтверждения без лишних деталей',
-  ]);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [liveSession, setLiveSession] = useState<ILiveSession | null>(null);
+  const [memoryItems, setMemoryItems] = useState<string[]>(() => memoryStorage.loadMemoryItems());
   const { toast, toastExiting, showToast } = hooks.useToast();
   const { t } = language.useLanguage();
+
+  const handleLaunch = useCallback(async () => {
+    setConnectionError(null);
+    setIsConnecting(true);
+    const apiKey = config.api.geminiApiKey;
+    if (!apiKey.trim()) {
+      const msg = t("connectionErrorNoKey");
+      setConnectionError(msg);
+      showToast(msg);
+      setIsConnecting(false);
+      return;
+    }
+    try {
+      const client = createLiveClient("gemini", { apiKey });
+      const systemInstruction = buildSystemInstruction(settings, memoryItems, t);
+      const session = await client.connect({
+        systemInstruction,
+        callbacks: {
+          onerror: (err) => {
+            console.error("Live session error:", err);
+          },
+        },
+      });
+      setLiveSession(session);
+      setIsLaunched(true);
+    } catch (err) {
+      console.error("Connect failed:", err);
+      const msg = t("connectionErrorGeneric");
+      setConnectionError(msg);
+      showToast(msg);
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [settings, memoryItems, t, showToast]);
+
+  const handleBack = useCallback(() => {
+    liveSession?.close();
+    setLiveSession(null);
+    setIsLaunched(false);
+  }, [liveSession]);
+
+  const handleClearMemory = useCallback(() => {
+    setMemoryItems([]);
+    memoryStorage.saveMemoryItems([]);
+    showToast(t("memoryCleared"));
+  }, [showToast, t]);
+
+  const handleRemoveMemoryItem = useCallback((index: number) => {
+    setMemoryItems((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      memoryStorage.saveMemoryItems(next);
+      return next;
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0B1118] text-white px-12 pt-12 pb-4 flex flex-col">
@@ -38,30 +81,22 @@ const App = () => {
           setSettings={setSettings}
           memoryItems={memoryItems}
           isLaunched={isLaunched}
-          onLaunch={() => {
-            setIsLaunched(true);
-            // TODO: бек — запуск агента
-          }}
-          onClearMemory={() => {
-            setMemoryItems([]);
-            showToast(t("memoryCleared"));
-          }}
+          isConnecting={isConnecting}
+          connectionError={connectionError}
+          onLaunch={handleLaunch}
+          onClearMemory={handleClearMemory}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
-        {isLaunched && (
+        {isLaunched && liveSession && (
           <div className="absolute inset-0 flex flex-col session-page-in">
             <AgentSessionPage
+              session={liveSession}
               memoryItems={memoryItems}
               initialMicOn={settings.microphone}
               initialScreenSharing={settings.screenShare}
-              onBack={() => setIsLaunched(false)}
-              onClearMemory={() => {
-                setMemoryItems([]);
-                showToast(t("memoryCleared"));
-              }}
-              onRemoveMemoryItem={(index) => {
-                setMemoryItems((prev) => prev.filter((_, i) => i !== index));
-              }}
+              onBack={handleBack}
+              onClearMemory={handleClearMemory}
+              onRemoveMemoryItem={handleRemoveMemoryItem}
             />
           </div>
         )}
@@ -70,7 +105,7 @@ const App = () => {
       {isSettingsOpen && (
         <components.SettingsPanel
           settings={settings}
-          defaultSettings={config.agentSettings.default}
+          defaultSettings={constants.agentSettings.default}
           onClose={() => setIsSettingsOpen(false)}
           onSave={(newSettings: AgentSettings) => {
             setSettings(newSettings);

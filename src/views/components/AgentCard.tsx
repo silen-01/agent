@@ -1,16 +1,14 @@
 import { Settings } from "lucide-react";
 
-import { type AgentSettings, type PersonalityId, type Tone } from "@types";
-import { language } from "@modules";
-
-const personalityKey = (id: PersonalityId): language.TranslationKey =>
-  `personality${id.charAt(0).toUpperCase() + id.slice(1)}` as language.TranslationKey;
+import { type AgentSettings, type Tone } from "@types";
+import { constants, getPersonalityByLang, language } from "@modules";
 
 const toneKey = (tone: Tone): language.TranslationKey =>
   `tone${tone.charAt(0).toUpperCase() + tone.slice(1)}` as language.TranslationKey;
 
 export const AgentCard = ({ settings, onOpenSettings }: { settings: AgentSettings; onOpenSettings: () => void }) => {
-  const { t } = language.useLanguage();
+  const { t, lang } = language.useLanguage();
+  const personalityName = getPersonalityByLang(constants.personalities, constants.language.defaultLang, settings.personality, lang).name;
 
   return (
     <div className="min-w-0 flex flex-col">
@@ -36,7 +34,7 @@ export const AgentCard = ({ settings, onOpenSettings }: { settings: AgentSetting
           <div className="text-sm text-gray-300">
             {t("personality")}:{" "}
             <span className="text-blue-400 font-medium">
-              {t(personalityKey(settings.personality))}
+              {personalityName}
             </span>
           </div>
           <div className="text-sm text-gray-300">

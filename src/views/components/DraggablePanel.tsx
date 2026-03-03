@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { Minimize2 } from "lucide-react";
-import { config } from "@modules";
+import { constants } from "@modules";
 
 export type DraggablePanelProps = {
   title: string;
@@ -32,9 +32,9 @@ export const DraggablePanel = ({
   children,
   sizePx,
   onResize,
-  minWidthPx = config.draggablePanel.defaultMinWidthPx,
-  minHeightPx = config.draggablePanel.defaultMinHeightPx,
-  bottomSafeAreaPx = config.session.bottomPanelOffsetPx,
+  minWidthPx = constants.draggablePanel.defaultMinWidthPx,
+  minHeightPx = constants.draggablePanel.defaultMinHeightPx,
+  bottomSafeAreaPx = constants.session.bottomPanelOffsetPx,
   otherPanelBounds = null,
   closeRequested = false,
   className = "",
@@ -51,8 +51,8 @@ export const DraggablePanel = ({
   const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
   const isResizingRef = useRef(false);
 
-  const padding = config.draggablePanel.paddingPx;
-  const gap = config.draggablePanel.gapPx;
+  const padding = constants.draggablePanel.paddingPx;
+  const gap = constants.draggablePanel.gapPx;
 
   const clampPosition = useCallback(
     (x: number, y: number) => {

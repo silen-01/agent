@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo } from "react";
-import { config } from "@modules/config.ts";
+import { constants } from "../constants.ts";
 import { translations, type Lang, type TranslationKey } from "./translations.ts";
 
 type LanguageContextValue = {
@@ -10,13 +10,21 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
+const loadSavedLang = (): Lang => {
+  try {
+    const saved = localStorage.getItem(constants.language.storageKey);
+    if (saved === "en" || saved === "ru") return saved;
+  } catch {}
+  return constants.language.defaultLang;
+};
+
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
-  const [lang, setLangState] = useState<Lang>("ru");
+  const [lang, setLangState] = useState<Lang>(loadSavedLang);
 
   const setLang = useCallback((newLang: Lang) => {
     setLangState(newLang);
     try {
-      localStorage.setItem(config.language.storageKey, newLang);
+      localStorage.setItem(constants.language.storageKey, newLang);
     } catch {}
   }, []);
 
