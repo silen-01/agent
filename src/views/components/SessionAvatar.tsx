@@ -10,16 +10,13 @@ export const SessionAvatar = ({ isSpeaking = false }: SessionAvatarProps) => {
     <div className="flex flex-col items-center justify-center min-h-0 min-w-0 p-4">
       <div
         className={`
-          relative flex items-center justify-center rounded-full bg-[#111827] border-2 border-gray-700
+          relative flex items-center justify-center rounded-full bg-[#111827] border-2
           w-44 h-44 md:w-56 md:h-56 shrink-0
-          transition-all duration-300
-          ${isSpeaking ? "ring-4 ring-blue-500/50 ring-offset-2 ring-offset-[#0B1118] scale-105" : ""}
+          transition-[border-color,box-shadow] duration-500
+          ${isSpeaking ? "session-avatar-speaking border-blue-500 ring-2 ring-blue-500/50 ring-offset-2 ring-offset-[#0B1118]" : "border-gray-700"}
         `}
       >
         <Bot size={64} className="text-gray-500 w-14 h-14 md:w-16 md:h-16" />
-        {isSpeaking && (
-          <span className="absolute inset-0 rounded-full animate-ping bg-blue-500/20" aria-hidden />
-        )}
       </div>
     </div>
   );

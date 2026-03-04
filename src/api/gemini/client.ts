@@ -48,13 +48,14 @@ export class GeminiLiveClient implements ILiveClient {
   }
 
   private mapToPayload(msg: LiveServerMessage): LiveMessagePayload {
-    const c = msg.serverContent;
+    const c = msg.serverContent as Record<string, unknown> | undefined;
     if (!c) return {};
     return {
       inputTranscription: c.inputTranscription as LiveMessagePayload["inputTranscription"],
       outputTranscription: c.outputTranscription as LiveMessagePayload["outputTranscription"],
       turnComplete: c.turnComplete,
       modelTurn: c.modelTurn as LiveMessagePayload["modelTurn"],
+      audioChunks: c.audioChunks as LiveMessagePayload["audioChunks"],
       interrupted: c.interrupted,
     };
   }

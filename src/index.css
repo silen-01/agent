@@ -331,4 +331,39 @@
     border: 0;
     box-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
+
+  /* Появление слова в диалоге (эффект создания) */
+  @keyframes session-dialog-word-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .session-dialog-word-in {
+    animation: session-dialog-word-in 0.25s ease-out forwards;
+  }
+
+  /* Аватар «ИИ говорит» — заметная синяя обводка + пульсирующее свечение */
+  @keyframes session-avatar-glow {
+    0%, 100% {
+      box-shadow: 0 0 24px rgba(59, 130, 246, 0.35), 0 0 48px rgba(59, 130, 246, 0.15);
+    }
+    50% {
+      box-shadow: 0 0 32px rgba(59, 130, 246, 0.5), 0 0 64px rgba(59, 130, 246, 0.25);
+    }
+  }
+  .session-avatar-speaking {
+    animation: session-avatar-glow 2.5s ease-in-out infinite;
+  }
+
+  /* Текст в карточке диалога переносится, без горизонтального скролла */
+  .session-dialog-wrap {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
 }

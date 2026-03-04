@@ -1,61 +1,49 @@
 import { useState, useCallback } from "react";
 
 import { type AgentSettings } from "@types";
-import { config, constants, language, buildSystemInstruction } from "@modules";
+import { constants, language, buildSystemInstruction } from "@modules";
 import { memoryStorage, settingsStorage } from "@storages";
-import { createLiveClient, type ILiveSession } from "./api/index.ts";
+import { useLiveSession } from "./api/hooks/index.ts";
 import { InitialPage, AgentSessionPage, components, ui, hooks } from "@views";
 
 const App = () => {
   const [settings, setSettings] = useState<AgentSettings>(settingsStorage.loadSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isLaunched, setIsLaunched] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [liveSession, setLiveSession] = useState<ILiveSession | null>(null);
   const [memoryItems, setMemoryItems] = useState<string[]>(() => memoryStorage.loadMemoryItems());
   const { toast, toastExiting, showToast } = hooks.useToast();
-  const { t } = language.useLanguage();
+  const { t, lang } = language.useLanguage();
+
+  const {
+    session: liveSession,
+    sessionReady,
+    isSpeaking,
+    messages,
+    inputTranscription,
+    outputTranscription,
+    isConnecting,
+    connectionError,
+    setOutputVolume,
+    networkLoadPercent,
+    launch,
+    disconnect,
+  } = useLiveSession();
 
   const handleLaunch = useCallback(async () => {
-    setConnectionError(null);
-    setIsConnecting(true);
-    const apiKey = config.api.geminiApiKey;
-    if (!apiKey.trim()) {
-      const msg = t("connectionErrorNoKey");
-      setConnectionError(msg);
-      showToast(msg);
-      setIsConnecting(false);
-      return;
-    }
-    try {
-      const client = createLiveClient("gemini", { apiKey });
-      const systemInstruction = buildSystemInstruction(settings, memoryItems, t);
-      const session = await client.connect({
-        systemInstruction,
-        callbacks: {
-          onerror: (err) => {
-            console.error("Live session error:", err);
-          },
-        },
-      });
-      setLiveSession(session);
-      setIsLaunched(true);
-    } catch (err) {
-      console.error("Connect failed:", err);
-      const msg = t("connectionErrorGeneric");
-      setConnectionError(msg);
-      showToast(msg);
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [settings, memoryItems, t, showToast]);
+    const systemInstruction = buildSystemInstruction(
+      settings,
+      memoryItems,
+      t,
+      lang,
+      constants.personalities,
+      constants.language.defaultLang
+    );
+    console.log("System instruction for AI:\n", systemInstruction);
+    await launch(systemInstruction, t, showToast, settings.voiceId);
+  }, [settings, memoryItems, t, lang, showToast, launch]);
 
   const handleBack = useCallback(() => {
-    liveSession?.close();
-    setLiveSession(null);
-    setIsLaunched(false);
-  }, [liveSession]);
+    disconnect();
+  }, [disconnect]);
 
   const handleClearMemory = useCallback(() => {
     setMemoryItems([]);
@@ -80,23 +68,32 @@ const App = () => {
           settings={settings}
           setSettings={setSettings}
           memoryItems={memoryItems}
-          isLaunched={isLaunched}
+          isLaunched={!!liveSession}
           isConnecting={isConnecting}
           connectionError={connectionError}
           onLaunch={handleLaunch}
           onClearMemory={handleClearMemory}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
-        {isLaunched && liveSession && (
+        {liveSession && (
           <div className="absolute inset-0 flex flex-col session-page-in">
             <AgentSessionPage
               session={liveSession}
+              sessionReady={sessionReady}
+              isConnecting={isConnecting}
+              isSpeaking={isSpeaking}
+              messages={messages}
+              inputTranscription={inputTranscription}
+              outputTranscription={outputTranscription}
+              setOutputVolume={setOutputVolume}
+              networkLoadPercent={networkLoadPercent}
               memoryItems={memoryItems}
               initialMicOn={settings.microphone}
               initialScreenSharing={settings.screenShare}
               onBack={handleBack}
               onClearMemory={handleClearMemory}
               onRemoveMemoryItem={handleRemoveMemoryItem}
+              onMicError={showToast}
             />
           </div>
         )}

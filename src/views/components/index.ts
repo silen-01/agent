@@ -2,7 +2,7 @@ export { AgentCard } from "./AgentCard.tsx";
 export { ControlsCard } from "./ControlsCard.tsx";
 export { MemoryCard, type MemoryCardProps } from "./MemoryCard.tsx";
 export { SettingsPanel } from "./SettingsPanel.tsx";
-export { SessionStatusBar } from "./SessionStatusBar.tsx";
+export { SessionStatusBar, type SessionStatusBarProps, type ConnectionStatus } from "./SessionStatusBar.tsx";
 export { SessionAvatar } from "./SessionAvatar.tsx";
 export { SessionDialogPanel } from "./SessionDialogPanel.tsx";
 export { SessionMemoryPanel, type SessionMemoryPanelProps } from "./SessionMemoryPanel.tsx";

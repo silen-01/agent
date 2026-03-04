@@ -5,6 +5,7 @@ import { constants } from "@modules";
 const def = constants.agentSettings.default;
 const { reactionTimeout, emotionality } = constants.settingsPanel;
 const personalityIds = constants.personalities.map((p) => p.id);
+const voiceIds = constants.geminiVoices.map((v) => v.value);
 
 const settingsSchema = Joi.object<AgentSettings>({
   microphone: Joi.boolean().default(def.microphone),
@@ -13,6 +14,9 @@ const settingsSchema = Joi.object<AgentSettings>({
   personality: Joi.string()
     .valid(...personalityIds)
     .default(def.personality),
+  voiceId: Joi.string()
+    .valid(...voiceIds)
+    .default(def.voiceId),
   tone: Joi.string()
     .valid("friendly", "neutral", "aggressive")
     .default(def.tone),

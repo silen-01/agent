@@ -2,6 +2,12 @@ import type { RealtimeInputPayload } from "./RealtimeInputPayload.ts";
 
 export * from "./RealtimeInputPayload.ts";
 
+/** Аудио-чанк от сервера (base64) */
+export interface AudioChunkPayload {
+  data?: string;
+  mimeType?: string;
+}
+
 /** Нормализованное сообщение от сервера (не привязано к формату конкретного ИИ) */
 export interface LiveMessagePayload {
   inputTranscription?: { text: string };
@@ -10,6 +16,8 @@ export interface LiveMessagePayload {
   modelTurn?: {
     parts: Array<{ inlineData?: { data: string; mimeType?: string } }>;
   };
+  /** Аудио-ответ (часто приходит в этом поле вместо modelTurn) */
+  audioChunks?: AudioChunkPayload[];
   interrupted?: unknown;
 }
 

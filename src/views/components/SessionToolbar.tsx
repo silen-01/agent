@@ -50,14 +50,14 @@ export const SessionToolbar = ({
           <span className="relative block w-[22px] h-[22px] shrink-0 overflow-hidden">
             {/* Нижняя часть иконки — зелёная (уровень) */}
             <span
-              className="absolute inset-0 transition-[clip-path] duration-150"
+              className="absolute inset-0 transition-[clip-path] duration-150 ease-out"
               style={{ clipPath: `inset(${100 - level}% 0 0 0)` }}
             >
               <Mic size={22} className="text-green-500 block" />
             </span>
             {/* Верхняя часть иконки — белая */}
             <span
-              className="absolute inset-0 transition-[clip-path] duration-150"
+              className="absolute inset-0 transition-[clip-path] duration-150 ease-out"
               style={{ clipPath: `inset(0 0 ${level}% 0)` }}
             >
               <Mic size={22} className="text-white block" />

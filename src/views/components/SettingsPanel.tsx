@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 
 import { type AgentSettings, type Tone } from "@types";
-import { getPersonalityByLang, language, constants } from "@modules";
+import { getPersonalityByLang, getPersonalityVoiceName, language, constants } from "@modules";
 import { CustomSelect } from "../ui";
 
 const TONE_OPTIONS: Tone[] = ["friendly", "neutral", "aggressive"];
@@ -23,6 +23,10 @@ export const SettingsPanel = ({
 
   const getPersonalityName = (id: string) => getPersonalityByLang(constants.personalities, constants.language.defaultLang, id, lang).name;
   const getPersonalityPrompt = (id: string) => getPersonalityByLang(constants.personalities, constants.language.defaultLang, id, lang).prompt;
+  const getVoiceLabel = (voiceId: string) => {
+    const v = constants.geminiVoices.find((x) => x.value === voiceId);
+    return v ? (lang === "en" ? v.labelEn : v.labelRu) : voiceId;
+  };
 
   const runCloseAnimation = useCallback((callback: () => void) => {
     setIsClosing(true);
@@ -90,9 +94,26 @@ export const SettingsPanel = ({
                 ...localSettings,
                 personality: personalityId,
                 personalityPrompt: getPersonalityPrompt(personalityId),
+                voiceId: getPersonalityVoiceName(constants.personalities, personalityId) ?? "Puck",
               })
             }
             aria-label={t("personalityLabel")}
+          />
+        </div>
+
+        {/* Voice */}
+        <div className="mb-5">
+          <label className="block mb-2 text-sm text-gray-300">
+            {t("voiceLabel")}
+          </label>
+          <CustomSelect
+            value={localSettings.voiceId}
+            options={constants.geminiVoices.map((v) => v.value)}
+            getOptionLabel={getVoiceLabel}
+            onChange={(voiceId) =>
+              setLocalSettings({ ...localSettings, voiceId })
+            }
+            aria-label={t("voiceLabel")}
           />
         </div>
 
@@ -112,7 +133,7 @@ export const SettingsPanel = ({
           />
         </div>
 
-        {/* Allow profanity - styled toggle */}
+        {/* Allow profanity */}
         <div className="mb-5 flex items-center justify-between">
           <label className="text-sm text-gray-300">{t("allowProfanity")}</label>
           <button
@@ -156,7 +177,7 @@ export const SettingsPanel = ({
           />
         </div>
 
-        {/* Reaction timeout slider */}
+        {/* Reaction timeout */}
         <div className="mb-5">
           <div className="flex justify-between items-baseline mb-2">
             <label className="text-sm text-gray-300">
@@ -182,7 +203,7 @@ export const SettingsPanel = ({
           />
         </div>
 
-        {/* Emotionality slider */}
+        {/* Emotionality */}
         <div className="mb-6">
           <div className="flex justify-between items-baseline mb-2">
             <label className="text-sm text-gray-300">
