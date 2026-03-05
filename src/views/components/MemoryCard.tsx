@@ -1,14 +1,15 @@
-import { Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { language } from "@modules";
 
 export type MemoryCardProps = {
   items: string[];
   onClear: () => void;
+  onRemoveItem?: (index: number) => void;
   height: number | null;
   isMd: boolean;
 };
 
-export const MemoryCard = ({ items, onClear, height, isMd }: MemoryCardProps) => {
+export const MemoryCard = ({ items, onClear, onRemoveItem, height, isMd }: MemoryCardProps) => {
   const { t } = language.useLanguage();
 
   return (
@@ -33,9 +34,19 @@ export const MemoryCard = ({ items, onClear, height, isMd }: MemoryCardProps) =>
           {items.map((item, i) => (
             <li
               key={i}
-              className="rounded-lg px-3 py-2.5 bg-[#0B1118]/70 border border-gray-700/60 text-gray-300"
+              className="group rounded-lg px-3 py-2.5 bg-[#0B1118]/70 border border-gray-700/60 text-gray-300 flex items-start gap-2"
             >
-              {item}
+              <span className="min-w-0 flex-1">{item}</span>
+              {onRemoveItem != null && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveItem(i)}
+                  className="shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 transition text-gray-500"
+                  title={t("sessionMemoryRemove")}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </li>
           ))}
         </ul>

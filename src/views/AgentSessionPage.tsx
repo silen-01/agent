@@ -7,7 +7,7 @@ import {
   SessionToolbar,
   DraggablePanel,
 } from "./components";
-import { language, constants, config } from "@modules";
+import { language, constants, config, stripMemoryMarkersFromText } from "@modules";
 import type { DialogMessage } from "../api/hooks/index.ts";
 import type { ConnectionStatus } from "./components";
 import { useAgentSession } from "./hooks";
@@ -101,7 +101,7 @@ export const AgentSessionPage = ({
             hideTitle
             messages={messages}
             streamingUser={inputTranscription}
-            streamingModel={outputTranscription}
+            streamingModel={stripMemoryMarkersFromText(outputTranscription)}
             showListeningHint={sessionReady}
           />
         </DraggablePanel>
@@ -160,6 +160,10 @@ export const AgentSessionPage = ({
           memoryVisible={sessionState.memoryVisible}
           onDialogTabToggle={sessionState.onDialogTabToggle}
           onMemoryTabToggle={sessionState.onMemoryTabToggle}
+          screenCaptureSettings={sessionState.screenCaptureSettings}
+          onScreenCaptureSettingsChange={(patch) =>
+            sessionState.setScreenCaptureSettings((prev) => ({ ...prev, ...patch }))
+          }
         />
       </div>
     </div>

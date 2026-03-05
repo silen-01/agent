@@ -20,6 +20,41 @@ export const getPersonalityVoiceName = (
   personalityId: string
 ): string | undefined => personalities.find((x) => x.id === personalityId)?.voiceName;
 
+/** Ключ для дедупликации памяти: нормализованная строка (trim, пробелы, без завершающей пунктуации, lowercase). */
+export const getMemoryItemDedupKey = (item: string): string => {
+  const s = item.trim().replace(/\s{2,}/g, " ").replace(/[.,;:!?]+$/g, "");
+  return s.toLowerCase();
+};
+
+/** Канонический вид пункта памяти для хранения (trim, пробелы, без завершающей пунктуации). */
+export const getMemoryItemCanonical = (item: string): string => {
+  return item.trim().replace(/\s{2,}/g, " ").replace(/[.,;:!?]+$/g, "");
+};
+
+/** Извлечь из текста ответа ИИ факты в формате [MEMORY: факт]. Возвращает уникальные по ключу дедупликации строки в каноническом виде. */
+export const extractMemoryItemsFromText = (text: string): string[] => {
+  const re = /\[MEMORY:\s*([^\]]+)\]/gi;
+  const seen = new Set<string>();
+  const out: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const raw = m[1].trim();
+    if (!raw) continue;
+    const canonical = getMemoryItemCanonical(raw);
+    const key = getMemoryItemDedupKey(canonical);
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(canonical);
+    }
+  }
+  return out;
+};
+
+/** Заменить в тексте [MEMORY: факт] на сам факт (для отображения в диалоге — маркер убирается, содержание остаётся). */
+export const stripMemoryMarkersFromText = (text: string): string => {
+  return text.replace(/\[\s*MEMORY\s*:\s*([^\]]+)\]/gi, "$1").replace(/\s{2,}/g, " ").trim();
+};
+
 /** Подставить в строку плейсхолдеры {seconds}, {emotionality}, {items}. */
 function fillPlaceholders(
   template: string,

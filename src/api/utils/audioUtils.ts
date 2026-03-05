@@ -23,6 +23,10 @@ export const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
   return btoa(binary);
 };
 
+/** Blob → base64 (для отправки кадров экрана как image/jpeg в sendRealtimeInput). */
+export const blobToBase64 = (blob: Blob): Promise<string> =>
+  blob.arrayBuffer().then((buf) => uint8ArrayToBase64(new Uint8Array(buf)));
+
 // --- PCM ↔ Web Audio ---
 
 /** Декодирует сырой PCM16 (base64 → bytes) в AudioBuffer для воспроизведения */

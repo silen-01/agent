@@ -238,7 +238,13 @@ export const SettingsPanel = ({
                 defaultSettings.personality,
                 lang
               ).prompt;
-              setLocalSettings({ ...defaultSettings, personalityPrompt });
+              setLocalSettings({
+                ...defaultSettings,
+                personalityPrompt,
+                microphone: localSettings.microphone,
+                screenShare: localSettings.screenShare,
+                camera: localSettings.camera,
+              });
             }}
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >

@@ -17,6 +17,7 @@ type InitialPageProps = {
   connectionError?: string | null;
   onLaunch: () => void;
   onClearMemory: () => void;
+  onRemoveMemoryItem?: (index: number) => void;
   onOpenSettings: () => void;
 };
 
@@ -29,6 +30,7 @@ export const InitialPage = ({
   connectionError = null,
   onLaunch,
   onClearMemory,
+  onRemoveMemoryItem,
   onOpenSettings,
 }: InitialPageProps) => {
   const leftColRef = useRef<HTMLDivElement>(null);
@@ -68,6 +70,7 @@ export const InitialPage = ({
             <MemoryCard
               items={memoryItems}
               onClear={onClearMemory}
+              onRemoveItem={onRemoveMemoryItem}
               height={memoryBlockHeight}
               isMd={isMd}
             />

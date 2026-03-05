@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 
 import { type AgentSettings } from "@types";
-import { constants, language, buildSystemInstruction } from "@modules";
+import { constants, language, buildSystemInstruction, getMemoryItemCanonical, getMemoryItemDedupKey } from "@modules";
 import { memoryStorage, settingsStorage } from "@storages";
 import { useLiveSession } from "./api/hooks/index.ts";
 import { InitialPage, AgentSessionPage, components, ui, hooks } from "@views";
@@ -12,6 +12,23 @@ const App = () => {
   const [memoryItems, setMemoryItems] = useState<string[]>(() => memoryStorage.loadMemoryItems());
   const { toast, toastExiting, showToast } = hooks.useToast();
   const { t, lang } = language.useLanguage();
+
+  const handleMemoryItemExtracted = useCallback(
+    (item: string) => {
+      const canonical = getMemoryItemCanonical(item);
+      if (!canonical) return;
+      const key = getMemoryItemDedupKey(canonical);
+      setMemoryItems((prev) => {
+        const alreadyHas = prev.some((s) => getMemoryItemDedupKey(s) === key);
+        if (alreadyHas) return prev;
+        const next = [...prev, canonical];
+        memoryStorage.saveMemoryItems(next);
+        showToast(t("memoryItemSaved"));
+        return next;
+      });
+    },
+    [showToast, t]
+  );
 
   const {
     session: liveSession,
@@ -26,7 +43,7 @@ const App = () => {
     networkLoadPercent,
     launch,
     disconnect,
-  } = useLiveSession();
+  } = useLiveSession({ onMemoryItemExtracted: handleMemoryItemExtracted });
 
   const handleLaunch = useCallback(async () => {
     const systemInstruction = buildSystemInstruction(
@@ -38,7 +55,13 @@ const App = () => {
       constants.language.defaultLang
     );
     console.log("System instruction for AI:\n", systemInstruction);
-    await launch(systemInstruction, t, showToast, settings.voiceId);
+    await launch(
+      systemInstruction,
+      t,
+      showToast,
+      settings.voiceId,
+      settings.reactionTimeoutSeconds
+    );
   }, [settings, memoryItems, t, lang, showToast, launch]);
 
   const handleBack = useCallback(() => {
@@ -73,6 +96,7 @@ const App = () => {
           connectionError={connectionError}
           onLaunch={handleLaunch}
           onClearMemory={handleClearMemory}
+          onRemoveMemoryItem={handleRemoveMemoryItem}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
         {liveSession && (

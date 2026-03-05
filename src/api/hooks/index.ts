@@ -1,1 +1,5 @@
-export { useLiveSession, type DialogMessage } from "./useLiveSession.ts";
+export {
+  useLiveSession,
+  type DialogMessage,
+  type UseLiveSessionOptions,
+} from "./useLiveSession.ts";

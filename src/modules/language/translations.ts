@@ -48,6 +48,7 @@ export const translations = {
     save: "Save",
     settingsSaved: "Settings saved",
     memoryCleared: "Memory cleared",
+    memoryItemSaved: "Saved to memory",
     resetToDefaults: "Reset to defaults",
 
     agentSessionTitle: "Session with agent",
@@ -80,6 +81,14 @@ export const translations = {
     micErrorPermission: "Microphone access denied. Allow access in browser settings.",
     micErrorNotFound: "No microphone found.",
     micErrorGeneric: "Microphone error. Check device and permissions.",
+    screenShareErrorPermission: "Screen share was denied. Allow access when the browser prompts.",
+    screenShareErrorGeneric: "Screen share failed. Try again or check browser permissions.",
+    sessionScreenCaptureTitle: "Screen capture",
+    sessionScreenCaptureResolution: "Resolution",
+    sessionScreenCaptureQuality: "Image quality",
+    sessionScreenCaptureFps: "Frames per second",
+    sessionScreenCaptureSkipStatic: "Skip static frames",
+    sessionScreenCaptureSkipStaticHint: "Less traffic when screen does not change",
 
     /** System instruction strings (language = user-selected) */
     sysInstructionToneFriendly: "Friendly tone.",
@@ -137,6 +146,7 @@ export const translations = {
     save: "Сохранить",
     settingsSaved: "Настройки сохранены",
     memoryCleared: "Память очищена",
+    memoryItemSaved: "Сохранено в память",
     resetToDefaults: "Сбросить настройки",
 
     agentSessionTitle: "Сессия с агентом",
@@ -169,6 +179,14 @@ export const translations = {
     micErrorPermission: "Доступ к микрофону запрещён. Разрешите в настройках браузера.",
     micErrorNotFound: "Микрофон не найден.",
     micErrorGeneric: "Ошибка микрофона. Проверьте устройство и разрешения.",
+    screenShareErrorPermission: "Трансляция экрана отклонена. Разрешите доступ в диалоге браузера.",
+    screenShareErrorGeneric: "Не удалось начать трансляцию экрана. Попробуйте снова или проверьте разрешения.",
+    sessionScreenCaptureTitle: "Трансляция экрана",
+    sessionScreenCaptureResolution: "Разрешение",
+    sessionScreenCaptureQuality: "Качество изображения",
+    sessionScreenCaptureFps: "Кадров в секунду",
+    sessionScreenCaptureSkipStatic: "Пропуск статичных кадров",
+    sessionScreenCaptureSkipStaticHint: "Меньше трафика, когда экран не меняется",
 
     /** System instruction strings (language = user-selected) */
     sysInstructionToneFriendly: "Дружелюбный тон.",
