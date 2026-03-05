@@ -81,7 +81,6 @@ export function useAgentSession({
   const tRef = useRef(t);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const screenVideoRef = useRef<HTMLVideoElement | null>(null);
-  const frameIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isProcessingFrameRef = useRef(false);
   const setScreenSharingRef = useRef(setScreenSharing);
   dialogVisibleRef.current = dialogVisible;
