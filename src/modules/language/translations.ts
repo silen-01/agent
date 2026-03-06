@@ -5,7 +5,7 @@ export const translations = {
     appTitle: "AI Assistant",
 
     activeAgent: "Active agent",
-    voiceAssistantDescription: "Voice AI assistant for system control",
+    voiceAssistantDescription: "Voice AI assistant for conversation and tasks",
     personality: "Personality",
     personalityValue: "Jarvis",
     personalityJarvis: "Jarvis",
@@ -103,7 +103,7 @@ export const translations = {
     appTitle: "AI Assistant",
 
     activeAgent: "Активный агент",
-    voiceAssistantDescription: "Голосовой AI ассистент для управления системой",
+    voiceAssistantDescription: "Голосовой AI ассистент для общения и помощи в задачах",
     personality: "Личность",
     personalityValue: "Джарвис",
     personalityJarvis: "Джарвис",
