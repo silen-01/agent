@@ -1,72 +1,67 @@
-import { useState, useCallback } from "react";
-
+import { useState, useCallback, lazy, Suspense, useEffect } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { type AgentSettings } from "@types";
-import { constants, language, buildSystemInstruction, getMemoryItemCanonical, getMemoryItemDedupKey } from "@modules";
+import { constants, language } from "@modules";
 import { memoryStorage, settingsStorage } from "@storages";
-import { useLiveSession } from "./api/hooks/index.ts";
-import { InitialPage, AgentSessionPage, components, ui, hooks } from "@views";
+import { InitialPage, components, ui, hooks } from "@views";
+
+const AgentSessionPage = lazy(() =>
+  import("@views/AgentSessionPage").then((m) => ({ default: m.AgentSessionPage }))
+);
 
 const App = () => {
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<AgentSettings>(settingsStorage.loadSettings());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [memoryItems, setMemoryItems] = useState<string[]>(() => memoryStorage.loadMemoryItems());
   const { toast, toastExiting, showToast } = hooks.useToast();
-  const { t, lang } = language.useLanguage();
+  const { t } = language.useLanguage();
+  const location = useLocation();
 
-  const handleMemoryItemExtracted = useCallback(
-    (item: string) => {
-      const canonical = getMemoryItemCanonical(item);
-      if (!canonical) return;
-      const key = getMemoryItemDedupKey(canonical);
-      setMemoryItems((prev) => {
-        const alreadyHas = prev.some((s) => getMemoryItemDedupKey(s) === key);
-        if (alreadyHas) return prev;
-        const next = [...prev, canonical];
-        memoryStorage.saveMemoryItems(next);
-        showToast(t("memoryItemSaved"));
-        return next;
-      });
-    },
-    [showToast, t]
-  );
+  useEffect(() => {
+    if (location.pathname === "/") {
+      setMemoryItems(memoryStorage.loadMemoryItems());
+    }
+  }, [location.pathname]);
 
-  const {
-    session: liveSession,
-    sessionReady,
-    isSpeaking,
-    messages,
-    inputTranscription,
-    outputTranscription,
-    isConnecting,
-    connectionError,
-    setOutputVolume,
-    networkLoadPercent,
-    launch,
-    disconnect,
-  } = useLiveSession({ onMemoryItemExtracted: handleMemoryItemExtracted });
+  // Prefetch чанка сессии после полной загрузки страницы, чтобы не держать вкладку в состоянии «загрузка»
+  useEffect(() => {
+    const run = () => void import("@views/AgentSessionPage");
+    const schedule = () => {
+      const id =
+        typeof requestIdleCallback !== "undefined"
+          ? requestIdleCallback(run, { timeout: 600 })
+          : window.setTimeout(run, 300);
+      return () =>
+        typeof cancelIdleCallback !== "undefined" ? cancelIdleCallback(id) : clearTimeout(id);
+    };
+    let cancel: (() => void) | undefined;
+    if (document.readyState === "complete") {
+      cancel = schedule();
+    } else {
+      const onLoad = () => {
+        cancel = schedule();
+      };
+      window.addEventListener("load", onLoad, { once: true });
+      return () => {
+        window.removeEventListener("load", onLoad);
+        cancel?.();
+      };
+    }
+    return cancel;
+  }, []);
 
-  const handleLaunch = useCallback(async () => {
-    const systemInstruction = buildSystemInstruction(
-      settings,
-      memoryItems,
-      t,
-      lang,
-      constants.personalities,
-      constants.language.defaultLang
-    );
-    console.log("System instruction for AI:\n", systemInstruction);
-    await launch(
-      systemInstruction,
-      t,
-      showToast,
-      settings.voiceId,
-      settings.reactionTimeoutSeconds
-    );
-  }, [settings, memoryItems, t, lang, showToast, launch]);
+  const applySettingsPatch = useCallback((patch: Partial<Pick<AgentSettings, "microphone" | "screenShare" | "camera">>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch };
+      settingsStorage.saveSettings(next);
+      return next;
+    });
+  }, []);
 
-  const handleBack = useCallback(() => {
-    disconnect();
-  }, [disconnect]);
+  const handleLaunch = useCallback(() => {
+    navigate("/session");
+  }, [navigate]);
 
   const handleClearMemory = useCallback(() => {
     setMemoryItems([]);
@@ -86,41 +81,37 @@ const App = () => {
     <div className="min-h-screen bg-[#0B1118] text-white px-12 pt-12 pb-4 flex flex-col">
       <ui.AppHeader />
 
-      <div className="flex-1 min-h-0 relative flex flex-col">
-        <InitialPage
-          settings={settings}
-          setSettings={setSettings}
-          memoryItems={memoryItems}
-          isLaunched={!!liveSession}
-          isConnecting={isConnecting}
-          connectionError={connectionError}
-          onLaunch={handleLaunch}
-          onClearMemory={handleClearMemory}
-          onRemoveMemoryItem={handleRemoveMemoryItem}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
-        {liveSession && (
-          <div className="absolute inset-0 flex flex-col session-page-in">
-            <AgentSessionPage
-              session={liveSession}
-              sessionReady={sessionReady}
-              isConnecting={isConnecting}
-              isSpeaking={isSpeaking}
-              messages={messages}
-              inputTranscription={inputTranscription}
-              outputTranscription={outputTranscription}
-              setOutputVolume={setOutputVolume}
-              networkLoadPercent={networkLoadPercent}
-              memoryItems={memoryItems}
-              initialMicOn={settings.microphone}
-              initialScreenSharing={settings.screenShare}
-              onBack={handleBack}
-              onClearMemory={handleClearMemory}
-              onRemoveMemoryItem={handleRemoveMemoryItem}
-              onMicError={showToast}
-            />
-          </div>
-        )}
+      <div className="flex-1 min-h-0 flex flex-col">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <InitialPage
+                settings={settings}
+                onSettingsChange={applySettingsPatch}
+                memoryItems={memoryItems}
+                onLaunch={handleLaunch}
+                onClearMemory={handleClearMemory}
+                onRemoveMemoryItem={handleRemoveMemoryItem}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+              />
+            }
+          />
+          <Route
+            path="/session"
+            element={
+              <Suspense
+                fallback={
+                  <div className="flex-1 flex flex-col items-center justify-center min-h-0 text-gray-400">
+                    <p>{t("launchConnecting")}</p>
+                  </div>
+                }
+              >
+                  <AgentSessionPage />
+              </Suspense>
+            }
+          />
+        </Routes>
       </div>
 
       {isSettingsOpen && (

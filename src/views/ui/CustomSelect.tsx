@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ChevronDown } from "lucide-react";
 
 type CustomSelectProps = {
@@ -10,10 +10,17 @@ type CustomSelectProps = {
   "aria-label"?: string;
 };
 
+const listboxId = (selectId: string | undefined) => (selectId ? `${selectId}-listbox` : undefined);
+
 export const CustomSelect = (props: CustomSelectProps) => {
   const { value, options, getOptionLabel, onChange, id, "aria-label": ariaLabel } = props;
   const [isOpen, setIsOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const selectedIndex = options.indexOf(value);
+  const safeSelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -27,6 +34,62 @@ export const CustomSelect = (props: CustomSelectProps) => {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const id = setTimeout(() => {
+      setFocusedIndex(safeSelectedIndex);
+      listRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [isOpen, safeSelectedIndex]);
+
+  const open = useCallback(() => setIsOpen(true), []);
+  const close = useCallback(() => setIsOpen(false), []);
+
+  const handleButtonKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown" || e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      if (!isOpen) open();
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!isOpen) open();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  const handleListKeyDown = (e: React.KeyboardEvent) => {
+    const n = options.length;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusedIndex((i) => (i + 1) % n);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusedIndex((i) => (i - 1 + n) % n);
+      return;
+    }
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const option = options[focusedIndex];
+      if (option != null) {
+        onChange(option);
+        close();
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    }
+  };
+
   const selectedLabel = getOptionLabel(value);
 
   const getItemClassName = (option: string) => {
@@ -38,6 +101,9 @@ export const CustomSelect = (props: CustomSelectProps) => {
     return base + " pl-3 text-gray-300 hover:bg-white/5 hover:text-white";
   };
 
+  const listboxIdVal = listboxId(id);
+  const activeId = listboxIdVal ? `${listboxIdVal}-option-${focusedIndex}` : undefined;
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -46,7 +112,9 @@ export const CustomSelect = (props: CustomSelectProps) => {
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        aria-controls={listboxIdVal}
         onClick={() => setIsOpen((prev) => !prev)}
+        onKeyDown={handleButtonKeyDown}
         className={
           "w-full flex items-center justify-between gap-2 rounded-xl pl-3 pr-10 py-2.5 text-sm text-left transition-colors duration-150 " +
           (isOpen
@@ -63,27 +131,26 @@ export const CustomSelect = (props: CustomSelectProps) => {
 
       {isOpen && (
         <ul
+          ref={listRef}
+          id={listboxIdVal}
           role="listbox"
-          aria-activedescendant={value}
-          className="absolute z-50 mt-2 w-full rounded-xl border border-gray-700 bg-[#111827] py-1.5 shadow-xl shadow-black/50 ring-1 ring-white/5"
+          tabIndex={0}
+          aria-activedescendant={activeId}
+          aria-label={ariaLabel ?? undefined}
+          className="absolute z-50 mt-2 w-full rounded-xl border border-gray-700 bg-[#111827] py-1.5 shadow-xl shadow-black/50 ring-1 ring-white/5 outline-none"
+          onKeyDown={handleListKeyDown}
         >
-          {options.map((option) => (
+          {options.map((option, i) => (
             <li
               key={option}
               role="option"
-              id={option}
+              id={listboxIdVal ? `${listboxIdVal}-option-${i}` : undefined}
               aria-selected={option === value}
               onClick={() => {
                 onChange(option);
-                setIsOpen(false);
+                close();
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onChange(option);
-                  setIsOpen(false);
-                }
-              }}
+              onMouseEnter={() => setFocusedIndex(i)}
               className={getItemClassName(option)}
             >
               {getOptionLabel(option)}

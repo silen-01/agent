@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { Minimize2 } from "lucide-react";
-import { constants } from "@modules";
+import { constants, language } from "@modules";
 
 export type DraggablePanelProps = {
   title: string;
@@ -39,12 +39,15 @@ export const DraggablePanel = ({
   closeRequested = false,
   className = "",
 }: DraggablePanelProps) => {
+  const { t } = language.useLanguage();
   const widthPx = sizePx.width;
   const heightPx = sizePx.height;
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
-    if (closeRequested) setIsExiting(true);
+    if (!closeRequested) return;
+    const id = setTimeout(() => setIsExiting(true), 0);
+    return () => clearTimeout(id);
   }, [closeRequested]);
   const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
   const isDraggingRef = useRef(false);
@@ -56,8 +59,8 @@ export const DraggablePanel = ({
 
   const clampPosition = useCallback(
     (x: number, y: number) => {
-      let maxX = Math.max(0, window.innerWidth - widthPx - padding);
-      let maxY = Math.max(0, window.innerHeight - bottomSafeAreaPx - heightPx);
+      const maxX = Math.max(0, window.innerWidth - widthPx - padding);
+      const maxY = Math.max(0, window.innerHeight - bottomSafeAreaPx - heightPx);
       let x1 = Math.max(padding, Math.min(maxX, x));
       let y1 = Math.max(padding, Math.min(maxY, y));
 
@@ -92,7 +95,7 @@ export const DraggablePanel = ({
 
       return { x: x1, y: y1 };
     },
-    [widthPx, heightPx, bottomSafeAreaPx, otherPanelBounds]
+    [widthPx, heightPx, bottomSafeAreaPx, otherPanelBounds, gap, padding]
   );
 
   const handlePointerDown = useCallback(
@@ -132,7 +135,7 @@ export const DraggablePanel = ({
       );
       onPositionChange(next);
     },
-    [onPositionChange, onResize, clampPosition, position, bottomSafeAreaPx, minWidthPx, minHeightPx]
+    [onPositionChange, onResize, clampPosition, position, bottomSafeAreaPx, minWidthPx, minHeightPx, padding]
   );
 
   const handlePointerUp = useCallback(() => {
@@ -205,7 +208,7 @@ export const DraggablePanel = ({
               setIsExiting(true);
             }}
             className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-600/50 transition"
-            title="Свернуть"
+            title={t("draggablePanelMinimize")}
           >
             <Minimize2 size={16} />
           </button>
@@ -223,7 +226,7 @@ export const DraggablePanel = ({
             onPointerLeave={handlePointerUp}
             onPointerCancel={handlePointerUp}
             className="absolute right-0 bottom-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end p-0.5"
-            title="Изменить размер"
+            title={t("draggablePanelResize")}
           >
             <svg width={12} height={12} viewBox="0 0 12 12" className="text-gray-500 shrink-0" aria-hidden>
               <path d="M12 12V8L8 12H12ZM12 8V4L4 12H8L12 8Z" fill="currentColor" opacity={0.6} />

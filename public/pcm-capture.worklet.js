@@ -1,11 +1,14 @@
-// Батч — меньше postMessage и вызовов API
+// Батч — меньше postMessage. Кольцевой буфер без splice.
 const BATCH_SAMPLES = 4096;
+const BUF_CAPACITY = 16384;
 
 class PcmCaptureProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super(options);
     this.batchSize = options.processorOptions?.batchSize ?? BATCH_SAMPLES;
-    this.accumulator = [];
+    this.buffer = new Float32Array(BUF_CAPACITY);
+    this.readIndex = 0;
+    this.writeIndex = 0;
   }
 
   process(inputs, outputs, parameters) {
@@ -14,13 +17,29 @@ class PcmCaptureProcessor extends AudioWorkletProcessor {
     const channel = input[0];
     if (!channel?.length) return true;
 
+    const buf = this.buffer;
+    const batchSize = this.batchSize;
+    const cap = buf.length;
+    let ri = this.readIndex;
+    let wi = this.writeIndex;
+
     for (let i = 0; i < channel.length; i++) {
-      this.accumulator.push(channel[i]);
+      buf[wi % cap] = channel[i];
+      wi++;
     }
-    while (this.accumulator.length >= this.batchSize) {
-      const batch = this.accumulator.splice(0, this.batchSize);
-      this.port.postMessage(new Float32Array(batch));
+    this.writeIndex = wi;
+
+    while (wi - ri >= batchSize) {
+      const batch = new Float32Array(batchSize);
+      const start = ri % cap;
+      for (let j = 0; j < batchSize; j++) {
+        batch[j] = buf[(start + j) % cap];
+      }
+      this.port.postMessage(batch);
+      ri += batchSize;
+      this.readIndex = ri;
     }
+
     return true;
   }
 }

@@ -20,7 +20,6 @@ export type PersonalityLangConfig = {
 /** Дефолтная личность из конфига: id и config по языкам (ключ — код языка, по умолчанию ru) */
 export type DefaultPersonality = {
   id: string;
-  /** Имя голоса Gemini (Puck, Zephyr, Kore, Charon и др.). Не задано — голос по умолчанию API. */
   voiceName?: string;
   config: {
     [key: string]: PersonalityLangConfig;
@@ -32,7 +31,6 @@ export type AgentSettings = {
   screenShare: boolean;
   camera: boolean;
   personality: string;
-  /** Имя голоса Gemini (Puck, Zephyr и др.). Пустая строка = голос личности по умолчанию. */
   voiceId: string;
   tone: Tone;
   allowProfanity: boolean;
