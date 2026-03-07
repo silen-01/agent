@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { language } from "@modules";
 import type { DialogMessage } from "../../api/hooks/index.ts";
 
@@ -14,7 +14,7 @@ export type SessionDialogPanelProps = {
   showListeningHint?: boolean;
 };
 
-/** Строка стриминга: слова по одному с анимацией появления */
+/** Строка стриминга: один span для уже показанных слов, новые слова — отдельные span с анимацией. Меньше DOM и скролл только при росте. */
 const StreamingLineWithWordEffect = ({
   label,
   text,
@@ -24,31 +24,38 @@ const StreamingLineWithWordEffect = ({
   text: string;
   className: string;
 }) => {
-  const prevLenRef = useRef(0);
+  const [prevWordCount, setPrevWordCount] = useState(0);
   const words = text.trim() ? text.trim().split(/\s+/) : [];
-  const newFrom = prevLenRef.current; // сколько слов было в прошлом рендере — новые с этого индекса
+
   useEffect(() => {
-    prevLenRef.current = words.length;
-  }, [text]);
+    const id = setTimeout(() => setPrevWordCount(words.length), 0);
+    return () => clearTimeout(id);
+  }, [words.length]);
+
+  const newFrom = prevWordCount;
+  const stableWords = words.slice(0, newFrom);
+  const newWords = words.slice(newFrom);
 
   return (
     <p className={`mb-2 session-dialog-wrap ${className}`}>
       <span className="text-gray-500 font-medium shrink-0">{label}</span>
       <span className="session-dialog-wrap">
-      {words.map((word, i) => (
-        <span
-          key={`${label}-${i}`}
-          className={i >= newFrom ? "session-dialog-word-in inline" : "inline"}
-          style={
-            i >= newFrom
-              ? { animationDelay: `${(i - newFrom) * 0.06}s` }
-              : undefined
-          }
-        >
-          {word}
-          {i < words.length - 1 ? "\u00A0" : ""}
-        </span>
-      ))}
+        {stableWords.length > 0 && (
+          <span key={`${label}-stable-${newFrom}`} className="inline">
+            {stableWords.join("\u00A0")}
+            {newWords.length > 0 ? "\u00A0" : ""}
+          </span>
+        )}
+        {newWords.map((word, i) => (
+          <span
+            key={`${label}-new-${newFrom + i}`}
+            className="session-dialog-word-in inline"
+            style={{ animationDelay: `${i * 0.06}s` }}
+          >
+            {word}
+            {i < newWords.length - 1 ? "\u00A0" : ""}
+          </span>
+        ))}
       </span>
     </p>
   );
@@ -63,10 +70,17 @@ export const SessionDialogPanel = ({
 }: SessionDialogPanelProps) => {
   const { t } = language.useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastScrollHeightRef = useRef(0);
   const hasContent = messages.length > 0 || streamingUser.trim() || streamingModel.trim();
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    const el = scrollRef.current;
+    if (!el) return;
+    const h = el.scrollHeight;
+    if (h > lastScrollHeightRef.current) {
+      lastScrollHeightRef.current = h;
+      el.scrollTo({ top: h, behavior: "auto" });
+    }
   }, [messages.length, streamingUser, streamingModel]);
 
   return (

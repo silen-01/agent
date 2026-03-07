@@ -54,8 +54,8 @@ export const constants = {
   agentSettings: {
     storageKey: "agent_settings",
     default: {
-      microphone: true,
-      screenShare: true,
+      microphone: false,
+      screenShare: false,
       camera: false,
       personality: PERSONALITIES[0].id,
       voiceId: getPersonalityVoiceName(PERSONALITIES, PERSONALITIES[0].id) ?? GeminiVoice.Puck,

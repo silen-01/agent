@@ -1,51 +1,17 @@
-import Joi from "joi";
 import type { AgentSettings } from "@types";
 import { constants } from "@modules";
+import { validateSettings } from "./settingsValidation.ts";
 
 const def = constants.agentSettings.default;
 const { reactionTimeout, emotionality } = constants.settingsPanel;
-const personalityIds = constants.personalities.map((p) => p.id);
-const voiceIds = constants.geminiVoices.map((v) => v.value);
 
-const settingsSchema = Joi.object<AgentSettings>({
-  microphone: Joi.boolean().default(def.microphone),
-  screenShare: Joi.boolean().default(def.screenShare),
-  camera: Joi.boolean().default(def.camera),
-  personality: Joi.string()
-    .valid(...personalityIds)
-    .default(def.personality),
-  voiceId: Joi.string()
-    .valid(...voiceIds)
-    .default(def.voiceId),
-  tone: Joi.string()
-    .valid("friendly", "neutral", "aggressive")
-    .default(def.tone),
-  allowProfanity: Joi.boolean().default(def.allowProfanity),
-  personalityPrompt: Joi.string().default(def.personalityPrompt),
-  reactionTimeoutSeconds: Joi.number()
-    .min(reactionTimeout.min)
-    .max(reactionTimeout.max)
-    .default(def.reactionTimeoutSeconds),
-  emotionality: Joi.number()
-    .min(emotionality.min)
-    .max(emotionality.max)
-    .default(def.emotionality),
-});
-
-/** Валидирует данные из localStorage и возвращает настройки (невалидные поля заменяются дефолтом). */
-function validateSettings(parsed: unknown): AgentSettings {
-  if (parsed == null || typeof parsed !== "object") return { ...def };
-  const { value, error } = settingsSchema.validate(parsed, {
-    stripUnknown: true,
-    abortEarly: true,
-    convert: true,
-  });
-  if (error) {
-    console.warn("Settings validation failed, using defaults", error.message);
-    return { ...def };
-  }
-  return value as AgentSettings;
-}
+const settingsSchema = {
+  default: def,
+  personalityIds: constants.personalities.map((p) => p.id),
+  voiceIds: constants.geminiVoices.map((v) => v.value),
+  reactionTimeout: { min: reactionTimeout.min, max: reactionTimeout.max },
+  emotionality: { min: emotionality.min, max: emotionality.max },
+};
 
 export const loadSettings = (): AgentSettings => {
   try {
@@ -57,7 +23,7 @@ export const loadSettings = (): AgentSettings => {
       } catch {
         return { ...def };
       }
-      return validateSettings(parsed);
+      return validateSettings(parsed, settingsSchema);
     }
   } catch (e) {
     console.warn("Failed to load settings from localStorage", e);

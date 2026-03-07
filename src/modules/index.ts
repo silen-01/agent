@@ -1,4 +1,4 @@
-export { config } from "./config.ts";
+export { config, getGeminiApiKey } from "./config.ts";
 export { constants, GeminiVoice } from "./constants.ts";
 export {
   buildSystemInstruction,

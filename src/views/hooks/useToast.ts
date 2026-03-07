@@ -7,9 +7,12 @@ export const useToast = () => {
 
   useEffect(() => {
     if (!toast) return;
-    setToastExiting(false);
+    const resetTimer = setTimeout(() => setToastExiting(false), 0);
     const timer = setTimeout(() => setToastExiting(true), constants.toast.visibleMs);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(resetTimer);
+      clearTimeout(timer);
+    };
   }, [toast]);
 
   useEffect(() => {

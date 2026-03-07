@@ -43,11 +43,14 @@ export const SettingsPanel = ({
 
   // При открытии панели: если поле «точная настройка» пустое — подставить промпт выбранной личности по текущему языку
   useEffect(() => {
-    setLocalSettings((prev) => {
-      if (prev.personalityPrompt.trim()) return prev;
-      const prompt = getPersonalityByLang(constants.personalities, constants.language.defaultLang, prev.personality, lang).prompt;
-      return { ...prev, personalityPrompt: prompt };
-    });
+    const timer = setTimeout(() => {
+      setLocalSettings((prev) => {
+        if (prev.personalityPrompt.trim()) return prev;
+        const prompt = getPersonalityByLang(constants.personalities, constants.language.defaultLang, prev.personality, lang).prompt;
+        return { ...prev, personalityPrompt: prompt };
+      });
+    }, 0);
+    return () => clearTimeout(timer);
   }, [settings.personality, settings.personalityPrompt, lang]);
 
   const toneKey = (tone: Tone): language.TranslationKey =>

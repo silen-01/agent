@@ -75,6 +75,8 @@ export const translations = {
     sessionToolbarCamera: "Camera",
     sessionToolbarCameraOff: "Camera off",
     sessionToolbarBack: "Back to start",
+    draggablePanelMinimize: "Minimize",
+    draggablePanelResize: "Resize",
     sessionMemoryRemove: "Remove from memory",
     sessionAiVolume: "AI volume",
     sessionMicSensitivity: "Microphone sensitivity",
@@ -98,6 +100,12 @@ export const translations = {
     sysInstructionProfanityDisabled: "Profanity in responses is not allowed.",
     sysInstructionReaction: "Auto-reaction delay: {seconds} sec. Emotionality: {emotionality}/100.",
     sysInstructionMemory: "User memory: {items}",
+    /** Текст авто-реакции по таймауту (отправляется модели, когда долго нет активности). */
+    systemInstructionAutoReaction: "[React to what you see or hear.]",
+    /** Сообщение модели при очистке пользователем всей памяти. */
+    memoryNotifyModelCleared: "[User cleared all memory. Do not use or refer to any previously saved memory items.]",
+    /** Сообщение модели при удалении одного элемента памяти. Подстановка: {item}. */
+    memoryNotifyModelRemoved: "[User removed this from memory; do not remember or use it: {item}]",
   },
   ru: {
     appTitle: "AI Assistant",
@@ -173,6 +181,8 @@ export const translations = {
     sessionToolbarCamera: "Камера",
     sessionToolbarCameraOff: "Камера выключена",
     sessionToolbarBack: "Вернуться на главную",
+    draggablePanelMinimize: "Свернуть",
+    draggablePanelResize: "Изменить размер",
     sessionMemoryRemove: "Удалить из памяти",
     sessionAiVolume: "Громкость ИИ",
     sessionMicSensitivity: "Чувствительность микрофона",
@@ -196,6 +206,11 @@ export const translations = {
     sysInstructionProfanityDisabled: "Мат в ответах запрещён.",
     sysInstructionReaction: "Задержка авто-реакции: {seconds} сек. Эмоциональность: {emotionality}/100.",
     sysInstructionMemory: "Память о пользователе: {items}",
+    systemInstructionAutoReaction: "[Реагируй на то, что видишь или слышишь.]",
+    /** Сообщение модели при очистке пользователем всей памяти. */
+    memoryNotifyModelCleared: "[Пользователь очистил всю память. Не используй и не ссылайся на ранее сохранённые пункты памяти.]",
+    /** Сообщение модели при удалении одного элемента памяти. Подстановка: {item}. */
+    memoryNotifyModelRemoved: "[Пользователь удалил это из памяти; не запоминай и не используй: {item}]",
   },
 } as const;
 

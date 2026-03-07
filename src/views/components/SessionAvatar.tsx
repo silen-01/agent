@@ -11,8 +11,8 @@ export const SessionAvatar = ({ isSpeaking = false }: SessionAvatarProps) => {
       <div
         className={`
           relative flex items-center justify-center rounded-full bg-[#111827] border-2
-          w-44 h-44 md:w-56 md:h-56 shrink-0
-          transition-[border-color,box-shadow] duration-500
+          w-44 h-44 md:w-56 md:h-56 shrink-0 overflow-hidden
+          transition-[border-color] duration-500
           ${isSpeaking ? "session-avatar-speaking border-blue-500 ring-2 ring-blue-500/50 ring-offset-2 ring-offset-[#0B1118]" : "border-gray-700"}
         `}
       >
