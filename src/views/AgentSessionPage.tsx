@@ -145,8 +145,6 @@ export const AgentSessionPage = ({
         constants.personalities,
         constants.language.defaultLang
       );
-    const initialInstruction = getSystemInstructionRef.current();
-    console.log("[Agent] System instruction (full prompt sent to AI):\n", initialInstruction);
     launch(
       getSystemInstructionRef,
       t,
