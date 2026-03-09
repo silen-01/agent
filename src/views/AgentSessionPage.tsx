@@ -206,6 +206,18 @@ export const AgentSessionPage = ({
         }
       };
 
+  const micPermissionRequestedRef = useRef(false);
+  useEffect(() => {
+    if (!isRouteMode || session != null || micPermissionRequestedRef.current) return;
+    micPermissionRequestedRef.current = true;
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        stream.getTracks().forEach((t) => t.stop());
+      })
+      .catch(() => {});
+  }, [isRouteMode, session]);
+
   if (isRouteMode && !session) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center min-h-0">

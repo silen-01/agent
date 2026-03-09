@@ -34,15 +34,17 @@ export function useMicCapture({
   const micLevelSmoothedRef = useRef(0);
   const micSensitivityRef = useRef(micSensitivity);
   const onMicErrorRef = useRef(onMicError);
+  const sessionReadyRef = useRef(sessionReady);
   const tRef = useRef(t);
   useEffect(() => {
     micSensitivityRef.current = micSensitivity;
     onMicErrorRef.current = onMicError;
+    sessionReadyRef.current = sessionReady;
     tRef.current = t;
-  }, [micSensitivity, onMicError, t]);
+  }, [micSensitivity, onMicError, sessionReady, t]);
 
   useEffect(() => {
-    if (!session || !sessionReady || !micOn) {
+    if (!session || !micOn) {
       if (!micOn && micStreamRef.current) {
         micStreamRef.current.getTracks().forEach((track) => track.stop());
         micStreamRef.current = null;
@@ -106,6 +108,7 @@ export function useMicCapture({
           const alpha = raw > s ? 0.8 : 0.28;
           micLevelSmoothedRef.current = alpha * raw + (1 - alpha) * s;
           setMicLevelPercent(Math.round(micLevelSmoothedRef.current * 100));
+          if (!sessionReadyRef.current) return;
           try {
             session.sendRealtimeInput({ audio: createPcmBlob(samples) });
           } catch (err) {
@@ -195,7 +198,7 @@ export function useMicCapture({
       }
       micGainNodeRef.current = null;
     };
-  }, [session, sessionReady, micOn]);
+  }, [session, micOn]);
 
   useEffect(() => {
     if (micGainNodeRef.current) {
