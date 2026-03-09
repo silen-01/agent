@@ -12,6 +12,10 @@ export function useLiveSessionAudio() {
   const outputVolumeRef = useRef(0.8);
   const activeSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const nextStartTimeRef = useRef(0);
+  /** Очередь планирования: чанки воспроизводятся строго по порядку, без гонок. */
+  const scheduleChainRef = useRef<Promise<void>>(Promise.resolve());
+  /** Поколение очереди: после stopAllPlayback инкрементируем, чанки со старым поколением не играем. */
+  const scheduleGenerationRef = useRef(0);
 
   const setOutputVolume = useCallback((volumeNormalized: number) => {
     const v = Math.max(0, Math.min(1, volumeNormalized));
@@ -20,6 +24,7 @@ export function useLiveSessionAudio() {
   }, []);
 
   const stopAllPlayback = useCallback(() => {
+    scheduleGenerationRef.current += 1;
     activeSourcesRef.current.forEach((source) => {
       try {
         source.stop();
@@ -29,46 +34,59 @@ export function useLiveSessionAudio() {
     });
     activeSourcesRef.current.clear();
     nextStartTimeRef.current = 0;
+    scheduleChainRef.current = Promise.resolve();
     setIsSpeaking(false);
   }, []);
 
-  const playAudioChunk = useCallback(async (base64Data: string) => {
-    if (!outputCtxRef.current) {
-      const ctx = new (window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({
-        sampleRate: OUTPUT_SAMPLE_RATE,
+  const playAudioChunk = useCallback((base64Data: string) => {
+    const myGeneration = scheduleGenerationRef.current;
+    scheduleChainRef.current = scheduleChainRef.current
+      .then(async () => {
+        if (myGeneration !== scheduleGenerationRef.current) return;
+        if (!outputCtxRef.current) {
+          const ctx = new (window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({
+            sampleRate: OUTPUT_SAMPLE_RATE,
+          });
+          outputCtxRef.current = ctx;
+          const gain = ctx.createGain();
+          gain.gain.value = outputVolumeRef.current;
+          gain.connect(ctx.destination);
+          outputGainRef.current = gain;
+        }
+        const ctx = outputCtxRef.current;
+        if (!ctx || ctx.state === "closed") return;
+        if (ctx.state === "suspended") await ctx.resume();
+
+        const buffer = await decodePcmToBuffer(
+          base64ToUint8Array(base64Data),
+          ctx,
+          OUTPUT_SAMPLE_RATE,
+          1
+        );
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(outputGainRef.current!);
+        activeSourcesRef.current.add(source);
+        setIsSpeaking(true);
+        source.onended = () => {
+          activeSourcesRef.current.delete(source);
+          if (activeSourcesRef.current.size === 0) setIsSpeaking(false);
+        };
+
+        nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
+        source.start(nextStartTimeRef.current);
+        nextStartTimeRef.current += buffer.duration;
+      })
+      .catch((e) => {
+        console.warn("Output audio play failed:", e);
       });
-      outputCtxRef.current = ctx;
-      const gain = ctx.createGain();
-      gain.gain.value = outputVolumeRef.current;
-      gain.connect(ctx.destination);
-      outputGainRef.current = gain;
-    }
-    const ctx = outputCtxRef.current;
-    if (ctx.state === "suspended") await ctx.resume();
-
-    const buffer = await decodePcmToBuffer(
-      base64ToUint8Array(base64Data),
-      ctx,
-      OUTPUT_SAMPLE_RATE,
-      1
-    );
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(outputGainRef.current!);
-    activeSourcesRef.current.add(source);
-    setIsSpeaking(true);
-    source.onended = () => {
-      activeSourcesRef.current.delete(source);
-      if (activeSourcesRef.current.size === 0) setIsSpeaking(false);
-    };
-
-    nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
-    source.start(nextStartTimeRef.current);
-    nextStartTimeRef.current += buffer.duration;
+    return scheduleChainRef.current;
   }, []);
 
   const cleanup = useCallback(() => {
+    scheduleGenerationRef.current += 1;
+    scheduleChainRef.current = Promise.resolve();
     outputGainRef.current = null;
     if (outputCtxRef.current?.state !== "closed") {
       outputCtxRef.current?.close().catch(() => {});

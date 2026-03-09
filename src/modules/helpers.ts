@@ -20,9 +20,43 @@ export const getPersonalityVoiceName = (
   personalityId: string
 ): string | undefined => personalities.find((x) => x.id === personalityId)?.voiceName;
 
-/** Ключ для дедупликации памяти: нормализованная строка (trim, пробелы, без завершающей пунктуации, lowercase). */
+/** Нормализованные слова для сравнения (lowercase, только буквы/цифры, без пустых). */
+function getMemoryWords(s: string): string[] {
+  return s
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}]/gu, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/** Похожесть двух фактов по словам: 0..1 (Jaccard). */
+function memoryItemSimilarity(a: string, b: string): number {
+  const wa = getMemoryWords(a);
+  const wb = getMemoryWords(b);
+  if (wa.length === 0 || wb.length === 0) return 0;
+  const setB = new Set(wb);
+  const inter = wa.filter((w) => setB.has(w)).length;
+  const union = wa.length + wb.length - inter;
+  return union > 0 ? inter / union : 0;
+}
+
+/** Один факт — подстрока другого (после нормализации в строку слов). */
+function oneIsSubstringOfOther(a: string, b: string): boolean {
+  const na = getMemoryWords(a).join(" ");
+  const nb = getMemoryWords(b).join(" ");
+  if (na.length < 8 || nb.length < 8) return false;
+  return na.includes(nb) || nb.includes(na);
+}
+
+/** Ключ для дедупликации памяти: нормализованная строка (trim, пробелы, без пунктуации по краям, lowercase). */
 export const getMemoryItemDedupKey = (item: string): string => {
-  const s = item.trim().replace(/\s{2,}/g, " ").replace(/[.,;:!?]+$/g, "");
+  const s = item
+    .trim()
+    .replace(/\s{2,}/g, " ")
+    .replace(/[.,;:!?]+$/g, "")
+    .replace(/^[.,;:!?\s]+/g, "");
   return s.toLowerCase();
 };
 
@@ -30,6 +64,22 @@ export const getMemoryItemDedupKey = (item: string): string => {
 export const getMemoryItemCanonical = (item: string): string => {
   return item.trim().replace(/\s{2,}/g, " ").replace(/[.,;:!?]+$/g, "");
 };
+
+/** Порог похожести слов (Jaccard): выше — считаем дубликатом. */
+const MEMORY_SIMILARITY_THRESHOLD = 0.65;
+
+/** Уже есть в списке или слишком похож на существующий пункт? */
+export function isMemoryItemDuplicate(item: string, existingItems: string[]): boolean {
+  const canonical = getMemoryItemCanonical(item);
+  if (!canonical) return true;
+  const key = getMemoryItemDedupKey(canonical);
+  for (const existing of existingItems) {
+    if (getMemoryItemDedupKey(existing) === key) return true;
+    if (memoryItemSimilarity(canonical, existing) >= MEMORY_SIMILARITY_THRESHOLD) return true;
+    if (oneIsSubstringOfOther(canonical, existing)) return true;
+  }
+  return false;
+}
 
 /** Извлечь из текста ответа ИИ факты в формате [MEMORY: факт]. Возвращает уникальные по ключу дедупликации строки в каноническом виде. */
 export const extractMemoryItemsFromText = (text: string): string[] => {
@@ -79,6 +129,16 @@ export const buildSystemInstruction = (
   const parts: string[] = [];
   if (settings.personalityPrompt) parts.push(settings.personalityPrompt);
 
+  // Один блок памяти: правило сохранения + при наличии — список сохранённого (без дублирования заголовка)
+  const memoryProactive = t("sysInstructionMemoryProactive");
+  if (memoryItems.length > 0) {
+    const memoryListTemplate = config.sysInstructionMemory ?? t("sysInstructionMemory");
+    const memoryList = fillPlaceholders(memoryListTemplate, { seconds: 0, emotionality: 0, items: memoryItems.join("; ") });
+    parts.push(`${memoryProactive}\n${memoryList}`);
+  } else {
+    parts.push(memoryProactive);
+  }
+
   const toneKey = `sysInstructionTone${settings.tone.charAt(0).toUpperCase() + settings.tone.slice(1)}` as TranslationKey;
   const toneLine =
     (settings.tone === "friendly"
@@ -93,18 +153,14 @@ export const buildSystemInstruction = (
     t(settings.allowProfanity ? "sysInstructionProfanityAllowed" : "sysInstructionProfanityDisabled");
   parts.push(profanityLine);
 
-  const reactionTemplate = config.sysInstructionReaction ?? t("sysInstructionReaction");
+  const emotionalityTemplate = config.sysInstructionEmotionality ?? t("sysInstructionEmotionality");
   parts.push(
-    fillPlaceholders(reactionTemplate, {
-      seconds: settings.reactionTimeoutSeconds,
+    fillPlaceholders(emotionalityTemplate, {
+      seconds: 0,
       emotionality: settings.emotionality,
       items: "",
     })
   );
 
-  if (memoryItems.length > 0) {
-    const memoryTemplate = config.sysInstructionMemory ?? t("sysInstructionMemory");
-    parts.push(fillPlaceholders(memoryTemplate, { seconds: 0, emotionality: 0, items: memoryItems.join("; ") }));
-  }
   return parts.join("\n");
 };

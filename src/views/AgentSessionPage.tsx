@@ -16,7 +16,7 @@ import {
   stripMemoryMarkersFromText,
   buildSystemInstruction,
   getMemoryItemCanonical,
-  getMemoryItemDedupKey,
+  isMemoryItemDuplicate,
 } from "@modules";
 import { memoryStorage, settingsStorage } from "@storages";
 import { useLiveSession } from "../api/hooks/index.ts";
@@ -73,15 +73,16 @@ export const AgentSessionPage = ({
     isRouteMode ? memoryStorage.loadMemoryItems() : []
   );
 
+  /** Геттер актуального промпта для реконнекта (память и настройки на текущий момент). */
+  const getSystemInstructionRef = useRef<() => string>(() => "");
+
   const { showToast } = useToast();
   const handleRouteMemoryExtracted = useCallback(
     (item: string) => {
       const canonical = getMemoryItemCanonical(item);
       if (!canonical) return;
-      const key = getMemoryItemDedupKey(canonical);
       setRouteMemoryItems((prev) => {
-        const alreadyHas = prev.some((s) => getMemoryItemDedupKey(s) === key);
-        if (alreadyHas) return prev;
+        if (isMemoryItemDuplicate(canonical, prev)) return prev;
         const next = [...prev, canonical];
         memoryStorage.saveMemoryItems(next);
         showToast(t("memoryItemSaved"));
@@ -111,6 +112,20 @@ export const AgentSessionPage = ({
 
   const launchStartedRef = useRef(false);
   const [routeSettings, setRouteSettings] = useState<ReturnType<typeof settingsStorage.loadSettings> | null>(null);
+
+  useEffect(() => {
+    if (!isRouteMode) return;
+    getSystemInstructionRef.current = () =>
+      buildSystemInstruction(
+        routeSettings ?? settingsStorage.loadSettings(),
+        routeMemoryItems,
+        t,
+        lang,
+        constants.personalities,
+        constants.language.defaultLang
+      );
+  }, [isRouteMode, routeSettings, routeMemoryItems, t, lang]);
+
   useEffect(() => {
     if (!isRouteMode) return;
     if (launchStartedRef.current) return;
@@ -121,16 +136,19 @@ export const AgentSessionPage = ({
       setRouteSettings(settings);
       setRouteMemoryItems(memoryItemsFromStorage);
     }, 0);
-    const systemInstruction = buildSystemInstruction(
-      settings,
-      memoryItemsFromStorage,
-      t,
-      lang,
-      constants.personalities,
-      constants.language.defaultLang
-    );
+    getSystemInstructionRef.current = () =>
+      buildSystemInstruction(
+        settings,
+        memoryItemsFromStorage,
+        t,
+        lang,
+        constants.personalities,
+        constants.language.defaultLang
+      );
+    const initialInstruction = getSystemInstructionRef.current();
+    console.log("[Agent] System instruction (full prompt sent to AI):\n", initialInstruction);
     launch(
-      systemInstruction,
+      getSystemInstructionRef,
       t,
       showToast,
       settings.voiceId,

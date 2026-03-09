@@ -40,6 +40,23 @@ export const useLiveSession = (options: UseLiveSessionOptions = {}) => {
       dialog.clearDialog();
       audio.cleanup();
     },
+    onSessionRestored: () => {
+      dialog.setInputTranscription((userText) => {
+        dialog.setOutputTranscription((modelText) => {
+          const toAdd: DialogMessage[] = [];
+          if (userText.trim()) toAdd.push({ role: "user", text: userText.trim() });
+          if (modelText.trim())
+            toAdd.push({ role: "model", text: stripMemoryMarkersFromText(modelText.trim()) });
+          if (toAdd.length) {
+            dialog.setMessages((prev) =>
+              [...prev, ...toAdd].slice(-dialog.maxDialogMessages)
+            );
+          }
+          return "";
+        });
+        return "";
+      });
+    },
   });
 
   const handleMessage = useCallback(
@@ -116,6 +133,7 @@ export const useLiveSession = (options: UseLiveSessionOptions = {}) => {
     connectionError: connection.connectionError,
     setConnectionError: connection.setConnectionError,
     setOutputVolume: audio.setOutputVolume,
+    stopAllPlayback: audio.stopAllPlayback,
     networkLoadPercent: connection.networkLoadPercent,
     launch: connection.launch,
     disconnect: connection.disconnect,

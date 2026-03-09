@@ -10,24 +10,37 @@ const RECONNECT_DELAY_MS = 2000;
 const RECONNECT_MAX_ATTEMPTS = 5;
 const READY_FALLBACK_MS = 12000;
 
+/** Типичные причины обрыва: таймаут на стороне API (долгое молчание/длительное соединение), сеть, "WebSocket is already in CLOSING or CLOSED state" при отправке после закрытия. */
+
 export type Translate = (key: "connectionErrorNoKey" | "connectionErrorGeneric") => string;
 
+export type GetSystemInstruction = () => string;
+
 export type LastLaunchParams = {
-  systemInstruction: string;
+  /** Ref на геттер актуального промпта — при реконнекте читаем .current() здесь. */
+  getSystemInstructionRef: { current: GetSystemInstruction };
   t: Translate;
   showToast: (msg: string) => void;
   voiceName?: string;
   autoReactionText: string;
 };
 
+function resolveSystemInstruction(params: LastLaunchParams): string {
+  const fn = params.getSystemInstructionRef.current;
+  return typeof fn === "function" ? fn() : "";
+}
+
 export type UseLiveSessionConnectionParams = {
   handleMessageRef: { current: (msg: LiveMessagePayload) => void };
   onDisconnect?: () => void;
+  /** Вызывается после успешного реконнекта — сбросить стриминговые поля диалога, чтобы новые реплики не дописывались в старые блоки. */
+  onSessionRestored?: () => void;
 };
 
 export function useLiveSessionConnection({
   handleMessageRef,
   onDisconnect,
+  onSessionRestored,
 }: UseLiveSessionConnectionParams) {
   const [session, setSession] = useState<ILiveSession | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
@@ -128,15 +141,23 @@ export function useLiveSessionConnection({
         readyTimeoutRef.current = null;
       }
       firstMessageReceivedRef.current = false;
+      const systemInstruction = resolveSystemInstruction(params);
+      if (!systemInstruction?.trim()) {
+        console.warn("[Agent] Reconnect: system instruction is empty, check getSystemInstructionRef.current");
+      }
       createLiveClient("gemini", { apiKey })
         .connect({
-          systemInstruction: params.systemInstruction,
+          systemInstruction: systemInstruction || "You are a helpful assistant.",
           ...(params.voiceName && { voiceName: params.voiceName }),
           callbacks: {
             onopen: () => {},
             onclose: () => {
               setSessionReady(false);
-              sessionRef.current?.close();
+              try {
+                sessionRef.current?.close();
+              } catch {
+                /* сокет уже закрыт сервером */
+              }
               sessionRef.current = null;
               if (!reconnectDisabledRef.current && lastLaunchParamsRef.current) {
                 setIsConnecting(true);
@@ -152,7 +173,11 @@ export function useLiveSessionConnection({
             onerror: (err) => {
               console.error("Live session error:", err);
               setSessionReady(false);
-              sessionRef.current?.close();
+              try {
+                sessionRef.current?.close();
+              } catch {
+                /* сокет уже закрыт */
+              }
               sessionRef.current = null;
               if (!reconnectDisabledRef.current && lastLaunchParamsRef.current) {
                 setIsConnecting(true);
@@ -172,6 +197,7 @@ export function useLiveSessionConnection({
           const wrapped = wrapSession(rawSession);
           sessionRef.current = wrapped;
           setSession(wrapped);
+          onSessionRestored?.();
           scheduleReadyFallback();
         })
         .catch((err) => {
@@ -193,7 +219,7 @@ export function useLiveSessionConnection({
         });
     };
     doConnect();
-  }, [scheduleReadyFallback, scheduleReconnect, handleMessageRef, wrapSession]);
+  }, [scheduleReadyFallback, scheduleReconnect, handleMessageRef, wrapSession, onSessionRestored]);
 
   useEffect(() => {
     tryReconnectRef.current = tryReconnect;
@@ -205,7 +231,7 @@ export function useLiveSessionConnection({
 
   const launch = useCallback(
     async (
-      systemInstruction: string,
+      getSystemInstructionRef: { current: GetSystemInstruction },
       t: Translate,
       showToast: (msg: string) => void,
       voiceName?: string,
@@ -238,16 +264,18 @@ export function useLiveSessionConnection({
       }
 
       const params: LastLaunchParams = {
-        systemInstruction,
+        getSystemInstructionRef,
         t,
         showToast,
         voiceName,
         autoReactionText: autoReactionText ?? "[React to what you see or hear.]",
       };
+      lastLaunchParamsRef.current = params;
 
       try {
         firstMessageReceivedRef.current = false;
         const client = createLiveClient("gemini", { apiKey });
+        const systemInstruction = resolveSystemInstruction(params);
         const rawSession = await client.connect({
           systemInstruction,
           ...(voiceName && { voiceName }),
@@ -255,7 +283,11 @@ export function useLiveSessionConnection({
             onopen: () => {},
             onclose: () => {
               setSessionReady(false);
-              sessionRef.current?.close();
+              try {
+                sessionRef.current?.close();
+              } catch {
+                /* сокет уже закрыт сервером */
+              }
               sessionRef.current = null;
               if (!reconnectDisabledRef.current) {
                 lastLaunchParamsRef.current = params;
@@ -266,7 +298,11 @@ export function useLiveSessionConnection({
             onerror: (err) => {
               console.error("Live session error:", err);
               setSessionReady(false);
-              sessionRef.current?.close();
+              try {
+                sessionRef.current?.close();
+              } catch {
+                /* сокет уже закрыт */
+              }
               sessionRef.current = null;
               if (!reconnectDisabledRef.current) {
                 lastLaunchParamsRef.current = params;
@@ -277,7 +313,6 @@ export function useLiveSessionConnection({
             onmessage: (msg) => handleMessageRef.current(msg),
           },
         });
-        lastLaunchParamsRef.current = params;
         lastModelActivityRef.current = Date.now();
         const wrappedSession = wrapSession(rawSession);
         sessionRef.current = wrappedSession;

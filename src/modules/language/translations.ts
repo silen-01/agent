@@ -93,13 +93,18 @@ export const translations = {
     sessionScreenCaptureSkipStaticHint: "Less traffic when screen does not change",
 
     /** System instruction strings (language = user-selected) */
-    sysInstructionToneFriendly: "Friendly tone.",
-    sysInstructionToneNeutral: "Neutral tone.",
-    sysInstructionToneAggressive: "Brief, direct tone.",
-    sysInstructionProfanityAllowed: "Profanity in responses is allowed.",
-    sysInstructionProfanityDisabled: "Profanity in responses is not allowed.",
-    sysInstructionReaction: "Auto-reaction delay: {seconds} sec. Emotionality: {emotionality}/100.",
-    sysInstructionMemory: "User memory: {items}",
+    sysInstructionToneFriendly: "TONE: Friendly.",
+    sysInstructionToneNeutral: "TONE: Neutral.",
+    sysInstructionToneAggressive: "TONE: Brief, direct.",
+    sysInstructionProfanityAllowed: "PROFANITY: Allowed in responses.",
+    sysInstructionProfanityDisabled: "PROFANITY: Forbidden in responses.",
+    sysInstructionEmotionality: "EMOTIONALITY: {emotionality}/100.",
+    /** Заголовок списка уже сохранённых фактов (объекты памяти). */
+    sysInstructionMemory: "SAVED MEMORY: {items}",
+    /** Правила: как сохранять новые факты в память. */
+    sysInstructionMemoryProactive: `MEMORY RULES: When something worth remembering is said or becomes clear (about the user, situation, agreements, context — anything you might need later), you MUST output it as [MEMORY: fact] in your reply. One fact per turn when applicable. Example: [MEMORY: User works night shifts and prefers short replies]. When in doubt, save it. Do not wait for the user to ask.
+- Memory must be complete enough to sustain the dialogue even after reconnection.
+- Memory must be to the point and focused on the essence; avoid redundant or filler content.`,
     /** Текст авто-реакции по таймауту (отправляется модели, когда долго нет активности). */
     systemInstructionAutoReaction: "[React to what you see or hear.]",
     /** Сообщение модели при очистке пользователем всей памяти. */
@@ -199,13 +204,16 @@ export const translations = {
     sessionScreenCaptureSkipStaticHint: "Меньше трафика, когда экран не меняется",
 
     /** System instruction strings (language = user-selected) */
-    sysInstructionToneFriendly: "Дружелюбный тон.",
-    sysInstructionToneNeutral: "Нейтральный тон.",
-    sysInstructionToneAggressive: "Краткий, прямой тон.",
-    sysInstructionProfanityAllowed: "Мат в ответах разрешён.",
-    sysInstructionProfanityDisabled: "Мат в ответах запрещён.",
-    sysInstructionReaction: "Задержка авто-реакции: {seconds} сек. Эмоциональность: {emotionality}/100.",
-    sysInstructionMemory: "Память о пользователе: {items}",
+    sysInstructionToneFriendly: "НАСТРОЕНИЕ: Дружелюбный.",
+    sysInstructionToneNeutral: "НАСТРОЕНИЕ: Нейтральный.",
+    sysInstructionToneAggressive: "НАСТРОЕНИЕ: Краткий, прямой.",
+    sysInstructionProfanityAllowed: "МАТ: Разрешён в ответах.",
+    sysInstructionProfanityDisabled: "МАТ: Запрещён в ответах.",
+    sysInstructionEmotionality: "ЭМОЦИОНАЛЬНОСТЬ: {emotionality}/100.",
+    /** Заголовок списка уже сохранённых фактов (объекты памяти). */
+    sysInstructionMemory: "СОХРАНЁННАЯ ПАМЯТЬ: {items}",
+    /** Правила: как сохранять новые факты в память. */
+    sysInstructionMemoryProactive: `ПРАВИЛА ПАМЯТИ: Когда прозвучало или стало ясно что-то, что стоит запомнить (о пользователе, ситуации, договорённостях, контексте — всё, что может пригодиться потом), ты ОБЯЗАН вывести это в ответе в формате [MEMORY: факт]. Один факт за ход, когда применимо. Пример: [MEMORY: Пользователь работает в ночную смену и предпочитает короткие ответы]. Если сомневаешься — сохрани. Не жди просьбы пользователя. Память должна быть достаточно полной, чтобы поддерживать диалог даже после переподключения.`,
     systemInstructionAutoReaction: "[Реагируй на то, что видишь или слышишь.]",
     /** Сообщение модели при очистке пользователем всей памяти. */
     memoryNotifyModelCleared: "[Пользователь очистил всю память. Не используй и не ссылайся на ранее сохранённые пункты памяти.]",

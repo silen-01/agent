@@ -7,7 +7,7 @@ export type PersonalitySysInstructionOverrides = {
   sysInstructionToneAggressive?: string;
   sysInstructionProfanityAllowed?: string;
   sysInstructionProfanityDisabled?: string;
-  sysInstructionReaction?: string;
+  sysInstructionEmotionality?: string;
   sysInstructionMemory?: string;
 };
 

@@ -7,6 +7,7 @@ export {
   getMemoryItemDedupKey,
   getPersonalityByLang,
   getPersonalityVoiceName,
+  isMemoryItemDuplicate,
   stripMemoryMarkersFromText,
 } from "./helpers.ts";
 export * as language from "./language";
