@@ -162,8 +162,8 @@ export function useLiveSessionConnection({
             onopen: () => {
               log("tryReconnect onopen");
             },
-            onclose: () => {
-              log("tryReconnect onclose");
+            onclose: (e) => {
+              log("tryReconnect onclose", "code:", e?.code, "reason:", e?.reason);
               setSessionReady(false);
               try {
                 sessionRef.current?.close();
@@ -300,8 +300,8 @@ export function useLiveSessionConnection({
             onopen: () => {
               log("onopen (initial connect)");
             },
-            onclose: () => {
-              log("onclose (socket closed)");
+            onclose: (e) => {
+              log("onclose (socket closed)", "code:", e?.code, "reason:", e?.reason);
               setSessionReady(false);
               try {
                 sessionRef.current?.close();

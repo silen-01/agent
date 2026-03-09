@@ -43,4 +43,9 @@
 - `onopen (initial connect)`
 - `session ready (first message or fallback)`
 
-Если сразу после `onopen` идёт `onclose` или `onerror` — соединение обрывается (сеть, таймаут API, ограничения мобильного). Если сначала `launch: connect() failed` — первый запрос не прошёл, затем должен быть `tryReconnect start` и повторная попытка.
+Если сразу после `onopen` идёт `onclose` или `onerror` — соединение обрывается. В логе теперь выводятся **code** и **reason** закрытия:
+
+- **1008** — «Operation is not implemented, or supported, or enabled»: часто конфиг (модель, голос, регион) или браузер (Safari) не поддерживается.
+- **1011** — внутренняя ошибка на стороне API; иногда помогает смена модели или повтор через несколько секунд.
+
+Если цикл «onopen → onclose» повторяется на десктопе (в т.ч. Safari) — откройте консоль и посмотрите точные `code` и `reason` в логе `[LiveSession] onclose (socket closed) code: … reason: …`.

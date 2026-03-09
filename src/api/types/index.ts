@@ -21,9 +21,15 @@ export interface LiveMessagePayload {
   interrupted?: unknown;
 }
 
+/** Событие закрытия (код и причина от WebSocket / Gemini). */
+export interface LiveCloseEvent {
+  code?: number;
+  reason?: string;
+}
+
 export interface LiveConnectionCallbacks {
   onopen?: () => void;
-  onclose?: () => void;
+  onclose?: (e?: LiveCloseEvent) => void;
   onerror?: (error: unknown) => void;
   onmessage?: (message: LiveMessagePayload) => void;
 }
