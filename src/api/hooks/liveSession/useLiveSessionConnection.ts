@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { getGeminiApiKey } from "@modules";
 import { createLiveClient, type ILiveSession } from "../../index.ts";
-import type { LiveMessagePayload } from "../../types/index.ts";
+import type { LiveCloseEvent, LiveMessagePayload } from "../../types/index.ts";
 
 /** 100% = 1 MB/с (сумма отправки + приёма по этому соединению). */
 const NETWORK_LOAD_SCALE_BYTES_PER_SEC = 1048576;
@@ -15,9 +15,16 @@ function log(msg: string, ...args: unknown[]) {
   console.log(LOG_PREFIX, msg, ...args);
 }
 
+/** Ошибка 1007 «User location is not supported» — API недоступен в регионе пользователя. */
+function isLocationNotSupportedClose(e?: LiveCloseEvent): boolean {
+  if (e?.code !== 1007) return false;
+  const r = (e.reason ?? "").toLowerCase();
+  return r.includes("location") || r.includes("not supported");
+}
+
 /** Типичные причины обрыва: таймаут на стороне API (долгое молчание/длительное соединение), сеть, "WebSocket is already in CLOSING or CLOSED state" при отправке после закрытия. */
 
-export type Translate = (key: "connectionErrorNoKey" | "connectionErrorGeneric") => string;
+export type Translate = (key: "connectionErrorNoKey" | "connectionErrorGeneric" | "connectionErrorRegion") => string;
 
 export type GetSystemInstruction = () => string;
 
@@ -171,6 +178,14 @@ export function useLiveSessionConnection({
                 /* сокет уже закрыт сервером */
               }
               sessionRef.current = null;
+              if (isLocationNotSupportedClose(e) && lastLaunchParamsRef.current) {
+                const msg = lastLaunchParamsRef.current.t("connectionErrorRegion");
+                setConnectionError(msg);
+                lastLaunchParamsRef.current.showToast(msg);
+                reconnectDisabledRef.current = true;
+                setIsConnecting(false);
+                return;
+              }
               if (!reconnectDisabledRef.current && lastLaunchParamsRef.current) {
                 setIsConnecting(true);
                 reconnectAttemptRef.current += 1;
@@ -309,6 +324,14 @@ export function useLiveSessionConnection({
                 /* сокет уже закрыт сервером */
               }
               sessionRef.current = null;
+              if (isLocationNotSupportedClose(e)) {
+                const msg = params.t("connectionErrorRegion");
+                setConnectionError(msg);
+                params.showToast(msg);
+                reconnectDisabledRef.current = true;
+                setIsConnecting(false);
+                return;
+              }
               if (!reconnectDisabledRef.current) {
                 lastLaunchParamsRef.current = params;
                 setIsConnecting(true);
