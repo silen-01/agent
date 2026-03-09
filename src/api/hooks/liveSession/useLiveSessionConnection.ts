@@ -50,6 +50,7 @@ export function useLiveSessionConnection({
   const [session, setSession] = useState<ILiveSession | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [hasHadSession, setHasHadSession] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [networkLoadPercent, setNetworkLoadPercent] = useState(0);
 
@@ -423,6 +424,7 @@ export function useLiveSessionConnection({
     sessionRef,
     sessionReady,
     isConnecting,
+    hasHadSession,
     connectionError,
     setConnectionError,
     networkLoadPercent,

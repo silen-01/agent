@@ -130,6 +130,7 @@ export const useLiveSession = (options: UseLiveSessionOptions = {}) => {
     inputTranscription: dialog.inputTranscription,
     outputTranscription: dialog.outputTranscription,
     isConnecting: connection.isConnecting,
+    hasHadSession: connection.hasHadSession,
     connectionError: connection.connectionError,
     setConnectionError: connection.setConnectionError,
     setOutputVolume: audio.setOutputVolume,
