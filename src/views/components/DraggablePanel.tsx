@@ -110,12 +110,16 @@ export const DraggablePanel = ({
         posY: position.y,
       };
       isDraggingRef.current = true;
+      document.body.style.touchAction = "none";
     },
     [position]
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (isDraggingRef.current || isResizingRef.current) {
+        e.preventDefault();
+      }
       if (isResizingRef.current && onResize) {
         const dw = e.clientX - resizeStart.current.x;
         const dh = e.clientY - resizeStart.current.y;
@@ -139,6 +143,9 @@ export const DraggablePanel = ({
   );
 
   const handlePointerUp = useCallback(() => {
+    if (isDraggingRef.current || isResizingRef.current) {
+      document.body.style.touchAction = "";
+    }
     isDraggingRef.current = false;
     isResizingRef.current = false;
   }, []);
@@ -156,12 +163,16 @@ export const DraggablePanel = ({
         h: heightPx,
       };
       isResizingRef.current = true;
+      document.body.style.touchAction = "none";
     },
     [onResize, widthPx, heightPx]
   );
 
   useEffect(() => {
     const onGlobalPointerUp = () => {
+      if (isDraggingRef.current || isResizingRef.current) {
+        document.body.style.touchAction = "";
+      }
       isDraggingRef.current = false;
       isResizingRef.current = false;
     };
@@ -198,7 +209,7 @@ export const DraggablePanel = ({
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-700 bg-gray-800/80 cursor-grab active:cursor-grabbing select-none shrink-0"
+        className="flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-700 bg-gray-800/80 cursor-grab active:cursor-grabbing select-none shrink-0 touch-none"
       >
         <span className="text-sm font-medium text-gray-200 truncate">{title}</span>
         {onClose != null && (
@@ -225,7 +236,7 @@ export const DraggablePanel = ({
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
             onPointerCancel={handlePointerUp}
-            className="absolute right-0 bottom-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end p-0.5"
+            className="absolute right-0 bottom-0 w-4 h-4 cursor-nwse-resize flex items-end justify-end p-0.5 touch-none"
             title={t("draggablePanelResize")}
           >
             <svg width={12} height={12} viewBox="0 0 12 12" className="text-gray-500 shrink-0" aria-hidden>

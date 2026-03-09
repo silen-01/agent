@@ -97,19 +97,20 @@ export const SessionStatusBar = ({
       : presets[0]?.id ?? "768x432";
 
   return (
-    <div className="shrink-0 relative flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl bg-[#111827] border border-gray-700">
-      <div className="flex items-center gap-4 min-w-0 flex-1">
+    <div className="shrink-0 relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-[#111827] border border-gray-700">
+      <div className="flex items-center justify-center gap-2 min-w-0 flex-1 sm:justify-start">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 min-w-0">
         {onAiVolumeChange != null && (
           <div className="relative shrink-0" ref={volumeRef}>
             <button
               type="button"
               onClick={() => setShowVolumeSlider((v) => !v)}
-              className="flex items-center justify-center p-1 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition"
+              className="flex items-center justify-center p-1.5 sm:p-1 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition touch-manipulation"
               title={t("sessionAiVolume")}
               aria-label={t("sessionAiVolume")}
               aria-expanded={showVolumeSlider}
             >
-              <Volume2 size={18} />
+              <Volume2 size={20} className="sm:w-[18px] sm:h-[18px]" />
             </button>
             {showVolumeSlider && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-5 rounded-xl bg-[#111827] border border-gray-700 shadow-xl z-50 p-3 flex flex-col items-center gap-2 w-[3rem]">
@@ -135,12 +136,12 @@ export const SessionStatusBar = ({
             <button
               type="button"
               onClick={() => setShowMicSlider((v) => !v)}
-              className="flex items-center justify-center p-1 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition"
+              className="flex items-center justify-center p-1.5 sm:p-1 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition touch-manipulation"
               title={t("sessionMicSensitivity")}
               aria-label={t("sessionMicSensitivity")}
               aria-expanded={showMicSlider}
             >
-              <Mic size={18} />
+              <Mic size={20} className="sm:w-[18px] sm:h-[18px]" />
             </button>
             {showMicSlider && (
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-5 rounded-xl bg-[#111827] border border-gray-700 shadow-xl z-50 p-3 flex flex-col items-center gap-2 w-[3rem]">
@@ -166,12 +167,12 @@ export const SessionStatusBar = ({
             <button
               type="button"
               onClick={() => setShowScreenCapturePanel((v) => !v)}
-              className="flex items-center justify-center p-1 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition"
+              className="flex items-center justify-center p-1.5 sm:p-1 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition touch-manipulation"
               title={t("sessionScreenCaptureTitle")}
               aria-label={t("sessionScreenCaptureTitle")}
               aria-expanded={showScreenCapturePanel}
             >
-              <Monitor size={18} />
+              <Monitor size={20} className="sm:w-[18px] sm:h-[18px]" />
             </button>
             {showScreenCapturePanel && (
               <div className="absolute bottom-full left-0 mb-5 rounded-xl bg-[#111827] border border-gray-700 shadow-xl z-50 p-4 w-64">
@@ -257,14 +258,14 @@ export const SessionStatusBar = ({
           }
         >
           <Brain
-            size={18}
-            className={
+            size={20}
+            className={`sm:w-[18px] sm:h-[18px] ${
               connectionStatus === "connected"
                 ? "text-blue-400"
                 : connectionStatus === "reconnecting"
                   ? "text-amber-400"
                   : "text-red-400"
-            }
+            }`}
           />
         </div>
         <div
@@ -273,50 +274,56 @@ export const SessionStatusBar = ({
           aria-label={`${t("sessionStatusNetwork")}: ${networkLoadPercent}%`}
         >
           <Wifi
-            size={18}
-            className={
+            size={20}
+            className={`sm:w-[18px] sm:h-[18px] ${
               networkLoadPercent <= 33
                 ? "text-emerald-400"
                 : networkLoadPercent <= 66
                   ? "text-amber-400"
                   : "text-red-400"
-            }
+            }`            }
           />
         </div>
+        </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0 absolute left-1/2 -translate-x-1/2">
+      <div className="flex items-center justify-center gap-1 shrink-0 order-last sm:order-none sm:absolute sm:left-1/2 sm:-translate-x-1/2">
         <button
           type="button"
           onClick={onDialogTabToggle}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition ${
+          className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition touch-manipulation ${
             dialogVisible
               ? "text-gray-200 bg-gray-700/70"
               : "text-gray-500 hover:text-gray-300 hover:bg-gray-700/40"
           }`}
           title={t("sessionDialogTitle")}
         >
-          <MessageSquare size={16} className="shrink-0" />
-          <span>{t("sessionDialogTitle")}</span>
+          <MessageSquare size={18} className="shrink-0 sm:w-4 sm:h-4" />
+          <span className="truncate">{t("sessionDialogTitle")}</span>
         </button>
         <button
           type="button"
           onClick={onMemoryTabToggle}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition ${
+          className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition touch-manipulation ${
             memoryVisible
               ? "text-gray-200 bg-gray-700/70"
               : "text-gray-500 hover:text-gray-300 hover:bg-gray-700/40"
           }`}
           title={t("memoryTitle")}
         >
-          <BookOpen size={16} className="shrink-0" />
-          <span>{t("memoryTitle")}</span>
+          <BookOpen size={18} className="shrink-0 sm:w-4 sm:h-4" />
+          <span className="truncate">{t("memoryTitle")}</span>
         </button>
       </div>
-      <div className="flex items-center gap-3 min-w-0 flex-1 justify-end">
+      <div className="hidden sm:flex items-center gap-3 min-w-0 flex-1 justify-end">
         {version != null && version !== "" && (
           <span className="text-xs text-gray-500 tabular-nums shrink-0">v{version}</span>
         )}
       </div>
+      {version != null && version !== "" && (
+        <span className="absolute right-2 bottom-2 text-[10px] text-gray-500 tabular-nums shrink-0 sm:hidden" aria-hidden>
+          v{version}
+        </span>
+      )}
     </div>
   );
 };
