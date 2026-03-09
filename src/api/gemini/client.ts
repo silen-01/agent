@@ -7,7 +7,7 @@ import type {
 } from "../types/index.ts";
 import { GeminiSessionAdapter } from "./sessionAdapter";
 
-const DEFAULT_MODEL = "gemini-2.5-flash-native-audio-preview-09-2025";
+const DEFAULT_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025";
 
 /** Реализация ILiveClient для Gemini. Вся логика Gemini изолирована в этой папке. */
 export class GeminiLiveClient implements ILiveClient {
