@@ -9,15 +9,7 @@ export class GeminiSessionAdapter implements ILiveSession {
   }
 
   sendRealtimeInput(payload: RealtimeInputPayload): void {
-    try {
-      this.session.sendRealtimeInput(payload as LiveSendRealtimeInputParameters);
-    } catch (err) {
-      const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-      if (msg.includes("closing") || msg.includes("closed") || msg.includes("websocket")) {
-        return;
-      }
-      throw err;
-    }
+    this.session.sendRealtimeInput(payload as LiveSendRealtimeInputParameters);
   }
 
   close(): void {
