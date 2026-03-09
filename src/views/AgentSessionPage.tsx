@@ -240,6 +240,7 @@ export const AgentSessionPage = ({
       handleBack={handleBack}
       effectiveOnMicError={effectiveOnMicError}
       isRouteMode={isRouteMode}
+      onUnlockOutputAudio={() => liveHook.unlockOutputAudio()}
     />
   );
 };
@@ -263,6 +264,7 @@ type AgentSessionContentProps = {
   handleBack: () => void;
   effectiveOnMicError?: (message: string) => void;
   isRouteMode: boolean;
+  onUnlockOutputAudio?: () => void;
 };
 
 const AgentSessionContent = ({
@@ -283,6 +285,7 @@ const AgentSessionContent = ({
   handleBack,
   effectiveOnMicError,
   isRouteMode,
+  onUnlockOutputAudio,
 }: AgentSessionContentProps) => {
   const { t } = language.useLanguage();
   const connectionStatus: ConnectionStatus = isConnecting
@@ -359,7 +362,10 @@ const AgentSessionContent = ({
         micLevelPercent={sessionState.micLevelPercent}
         screenSharing={sessionState.screenSharing}
         cameraOn={sessionState.cameraOn}
-        onMicToggle={() => sessionState.setMicOn((v) => !v)}
+        onMicToggle={() => {
+          if (!sessionState.micOn) onUnlockOutputAudio?.();
+          sessionState.setMicOn((v) => !v);
+        }}
         onScreenShareToggle={() => sessionState.setScreenSharing((v) => !v)}
         onCameraToggle={() => sessionState.setCameraOn((v) => !v)}
         cameraDisabled={!constants.controls.cameraEnabled}

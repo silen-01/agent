@@ -134,6 +134,7 @@ export const useLiveSession = (options: UseLiveSessionOptions = {}) => {
     setConnectionError: connection.setConnectionError,
     setOutputVolume: audio.setOutputVolume,
     stopAllPlayback: audio.stopAllPlayback,
+    unlockOutputAudio: audio.unlockOutputAudio,
     networkLoadPercent: connection.networkLoadPercent,
     launch: connection.launch,
     disconnect: connection.disconnect,

@@ -23,6 +23,28 @@ export function useLiveSessionAudio() {
     if (outputGainRef.current) outputGainRef.current.gain.value = v;
   }, []);
 
+  /** Вызвать по действию пользователя (тап/клик), чтобы на iOS/Safari разблокировать воспроизведение ответов ИИ. */
+  const unlockOutputAudio = useCallback(() => {
+    if (outputCtxRef.current) {
+      if (outputCtxRef.current.state === "suspended") {
+        outputCtxRef.current.resume().catch(() => {});
+      }
+      return;
+    }
+    const ctx = new (window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({
+      sampleRate: OUTPUT_SAMPLE_RATE,
+    });
+    outputCtxRef.current = ctx;
+    const gain = ctx.createGain();
+    gain.gain.value = outputVolumeRef.current;
+    gain.connect(ctx.destination);
+    outputGainRef.current = gain;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+  }, []);
+
   const stopAllPlayback = useCallback(() => {
     scheduleGenerationRef.current += 1;
     activeSourcesRef.current.forEach((source) => {
@@ -108,6 +130,7 @@ export function useLiveSessionAudio() {
     setOutputVolume,
     stopAllPlayback,
     playAudioChunk,
+    unlockOutputAudio,
     cleanup,
   };
 }
