@@ -14,3 +14,33 @@
 
 - **Локально (dev):** в `.env` задайте `VITE_GEMINI_API_KEY` — используется только при `npm run dev`, в production bundle не попадает.
 - **Прод (Vercel):** в настройках проекта добавьте **GEMINI_API_KEY** (без префикса `VITE_`). Ключ отдаётся клиенту только через serverless-эндпоинт `/api/live-token`, в статику не вшивается.
+
+## Отладка на телефоне (логи консоли)
+
+Чтобы смотреть логи с мобильного (почему долго подключается, реконнект и т.д.):
+
+### Android (Chrome)
+
+1. На ПК: Chrome → `chrome://inspect` → включите «Discover USB devices».
+2. Подключите телефон по USB, на телефоне разрешите отладку по USB.
+3. В списке устройств найдите вкладку с вашим сайтом → «inspect». Откроется DevTools, вкладка **Console** — там все `console.log` с телефона (фильтр по `[LiveSession]`).
+
+### iPhone/iPad (Safari)
+
+1. На iPhone: Настройки → Safari → Дополнения → **Веб-инспектор** — включить.
+2. Подключите iPhone к Mac по кабелю.
+3. На Mac: Safari → меню **Разработка** → выберите ваш iPhone → вкладка с вашим сайтом. Откроется Web Inspector, вкладка **Console** — логи с телефона.
+
+### Что смотреть в логах
+
+Все сообщения подключения помечены префиксом **`[LiveSession]`**. Ожидаемая последовательность при успешном запуске:
+
+- `launch() called`
+- `launch: connect() start`
+- `GeminiLiveClient.connect() start`
+- `GeminiLiveClient.connect() resolved`
+- `launch: connect() resolved, session set`
+- `onopen (initial connect)`
+- `session ready (first message or fallback)`
+
+Если сразу после `onopen` идёт `onclose` или `onerror` — соединение обрывается (сеть, таймаут API, ограничения мобильного). Если сначала `launch: connect() failed` — первый запрос не прошёл, затем должен быть `tryReconnect start` и повторная попытка.

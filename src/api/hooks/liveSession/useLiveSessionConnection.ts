@@ -10,6 +10,11 @@ const RECONNECT_DELAY_MS = 2000;
 const RECONNECT_MAX_ATTEMPTS = 5;
 const READY_FALLBACK_MS = 12000;
 
+const LOG_PREFIX = "[LiveSession]";
+function log(msg: string, ...args: unknown[]) {
+  console.log(LOG_PREFIX, msg, ...args);
+}
+
 /** Типичные причины обрыва: таймаут на стороне API (долгое молчание/длительное соединение), сеть, "WebSocket is already in CLOSING or CLOSED state" при отправке после закрытия. */
 
 export type Translate = (key: "connectionErrorNoKey" | "connectionErrorGeneric") => string;
@@ -63,6 +68,7 @@ export function useLiveSessionConnection({
   const markSessionReady = useCallback(() => {
     if (firstMessageReceivedRef.current) return;
     firstMessageReceivedRef.current = true;
+    log("session ready (first message or fallback)");
     if (readyTimeoutRef.current) {
       clearTimeout(readyTimeoutRef.current);
       readyTimeoutRef.current = null;
@@ -128,6 +134,7 @@ export function useLiveSessionConnection({
   const tryReconnect = useCallback(() => {
     const params = lastLaunchParamsRef.current;
     if (!params || reconnectDisabledRef.current) return;
+    log("tryReconnect start, attempt", reconnectAttemptRef.current);
 
     const doConnect = async () => {
       const apiKey = (await getGeminiApiKey())?.trim() ?? "";
@@ -141,17 +148,21 @@ export function useLiveSessionConnection({
         readyTimeoutRef.current = null;
       }
       firstMessageReceivedRef.current = false;
+      log("tryReconnect: connect() start");
       const systemInstruction = resolveSystemInstruction(params);
       if (!systemInstruction?.trim()) {
-        console.warn("[Agent] Reconnect: system instruction is empty, check getSystemInstructionRef.current");
+        console.warn(LOG_PREFIX, "Reconnect: system instruction is empty");
       }
       createLiveClient("gemini", { apiKey })
         .connect({
           systemInstruction: systemInstruction || "You are a helpful assistant.",
           ...(params.voiceName && { voiceName: params.voiceName }),
           callbacks: {
-            onopen: () => {},
+            onopen: () => {
+              log("tryReconnect onopen");
+            },
             onclose: () => {
+              log("tryReconnect onclose");
               setSessionReady(false);
               try {
                 sessionRef.current?.close();
@@ -194,13 +205,16 @@ export function useLiveSessionConnection({
           },
         })
         .then((rawSession) => {
+          log("tryReconnect: connect() resolved");
           const wrapped = wrapSession(rawSession);
           sessionRef.current = wrapped;
           setSession(wrapped);
+          setHasHadSession(true);
           onSessionRestored?.();
           scheduleReadyFallback();
         })
         .catch((err) => {
+          log("tryReconnect: connect() failed", err);
           console.error("Reconnect failed:", err);
           reconnectAttemptRef.current += 1;
           if (
@@ -238,6 +252,7 @@ export function useLiveSessionConnection({
       reactionTimeoutSeconds?: number,
       autoReactionText?: string
     ) => {
+      log("launch() called");
       setConnectionError(null);
       reconnectDisabledRef.current = false;
       reconnectAttemptRef.current = 0;
@@ -274,14 +289,18 @@ export function useLiveSessionConnection({
 
       try {
         firstMessageReceivedRef.current = false;
+        log("launch: connect() start");
         const client = createLiveClient("gemini", { apiKey });
         const systemInstruction = resolveSystemInstruction(params);
         const rawSession = await client.connect({
           systemInstruction,
           ...(voiceName && { voiceName }),
           callbacks: {
-            onopen: () => {},
+            onopen: () => {
+              log("onopen (initial connect)");
+            },
             onclose: () => {
+              log("onclose (socket closed)");
               setSessionReady(false);
               try {
                 sessionRef.current?.close();
@@ -296,6 +315,7 @@ export function useLiveSessionConnection({
               }
             },
             onerror: (err) => {
+              log("onerror", err);
               console.error("Live session error:", err);
               setSessionReady(false);
               try {
@@ -314,9 +334,11 @@ export function useLiveSessionConnection({
           },
         });
         lastModelActivityRef.current = Date.now();
+        log("launch: connect() resolved, session set");
         const wrappedSession = wrapSession(rawSession);
         sessionRef.current = wrappedSession;
         setSession(wrappedSession);
+        setHasHadSession(true);
         scheduleReadyFallback();
       } catch (err) {
         console.error("Connect failed:", err);

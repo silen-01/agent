@@ -20,6 +20,7 @@ export class GeminiLiveClient implements ILiveClient {
   async connect(config: LiveConnectionConfig): Promise<ILiveSession> {
     const callbacks = config.callbacks ?? {};
     const model = config.model ?? DEFAULT_MODEL;
+    console.log("[LiveSession] GeminiLiveClient.connect() start, model:", model);
 
     const session = await this.ai.live.connect({
       model,
@@ -44,6 +45,7 @@ export class GeminiLiveClient implements ILiveClient {
       },
     });
 
+    console.log("[LiveSession] GeminiLiveClient.connect() resolved");
     return new GeminiSessionAdapter(session);
   }
 
