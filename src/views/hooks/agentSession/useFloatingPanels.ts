@@ -40,7 +40,9 @@ export function useFloatingPanels() {
   const [cameraPosition, setCameraPosition] = useState<{ x: number; y: number }>(getDefaultCameraPos);
   const [dialogSize, setDialogSize] = useState(() => ({ ...constants.session.defaultDialogSizePx }));
   const [memorySize, setMemorySize] = useState(() => ({ ...constants.session.defaultMemorySizePx }));
-  const [cameraSize, setCameraSize] = useState(() => ({ ...constants.session.defaultCameraSizePx }));
+  const [cameraSize, setCameraSize] = useState<{ width: number; height: number }>(() => ({
+    ...constants.session.defaultCameraSizePx,
+  }));
 
   const dialogVisibleRef = useRef(dialogVisible);
   const memoryVisibleRef = useRef(memoryVisible);
