@@ -41,6 +41,7 @@ export type AgentSessionPageProps = {
   onMemoryItemExtracted?: (item: string) => void;
   initialMicOn?: boolean;
   initialScreenSharing?: boolean;
+  initialCameraOn?: boolean;
   onBack?: () => void;
   onMicError?: (message: string) => void;
 };
@@ -61,6 +62,7 @@ export const AgentSessionPage = ({
   onMemoryItemExtracted: onMemoryItemExtractedProp,
   initialMicOn: initialMicOnProp = true,
   initialScreenSharing: initialScreenSharingProp = false,
+  initialCameraOn: initialCameraOnProp = false,
   onBack: onBackProp,
   onMicError,
 }: AgentSessionPageProps) => {
@@ -168,6 +170,7 @@ export const AgentSessionPage = ({
   const s = routeSettings;
   const initialMicOn = sessionProp !== undefined ? initialMicOnProp : (s?.microphone ?? true);
   const initialScreenSharing = sessionProp !== undefined ? initialScreenSharingProp : (s?.screenShare ?? false);
+  const initialCameraOn = sessionProp !== undefined ? initialCameraOnProp : (s?.camera ?? false);
   const handleBack = sessionProp !== undefined ? (onBackProp ?? (() => {})) : () => { disconnect(); navigate("/"); };
   const effectiveOnMicError = sessionProp !== undefined ? onMicError : showToast;
 
@@ -249,6 +252,7 @@ export const AgentSessionPage = ({
       onRemoveMemoryItem={handleRemoveMemoryItem}
       initialMicOn={initialMicOn}
       initialScreenSharing={initialScreenSharing}
+      initialCameraOn={initialCameraOn}
       handleBack={handleBack}
       effectiveOnMicError={effectiveOnMicError}
       isRouteMode={isRouteMode}
@@ -256,6 +260,104 @@ export const AgentSessionPage = ({
     />
   );
 };
+
+type PreviewSource = "camera" | "screen";
+
+/** Панель превью: переключение между камерой и трансляцией экрана, отображение выбранного потока. */
+function CameraPreviewPanel({
+  cameraStream,
+  screenStream,
+  cameraOn,
+  screenSharing,
+  loadingLabel,
+  cameraLabel,
+  screenLabel,
+  videoLabel,
+}: {
+  cameraStream: MediaStream | null;
+  screenStream: MediaStream | null;
+  cameraOn: boolean;
+  screenSharing: boolean;
+  loadingLabel: string;
+  cameraLabel: string;
+  screenLabel: string;
+  videoLabel: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hasCamera = cameraOn && cameraStream != null;
+  const hasScreen = screenSharing && screenStream != null;
+  const [viewSource, setViewSource] = useState<PreviewSource>(() =>
+    cameraOn ? "camera" : screenSharing ? "screen" : "camera"
+  );
+  const currentStream = viewSource === "camera" ? cameraStream : screenStream;
+
+  useEffect(() => {
+    if (viewSource === "screen" && !hasScreen && hasCamera) setViewSource("camera");
+    if (viewSource === "camera" && !hasCamera && hasScreen) setViewSource("screen");
+  }, [viewSource, hasCamera, hasScreen]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.srcObject = currentStream;
+    return () => {
+      v.srcObject = null;
+    };
+  }, [currentStream]);
+
+  const showTabs = hasCamera || hasScreen;
+
+  return (
+    <div className="w-full h-full min-h-0 flex flex-col bg-black rounded overflow-hidden">
+      {showTabs && (
+        <div className="shrink-0 flex border-b border-gray-700">
+          <button
+            type="button"
+            onClick={() => setViewSource("camera")}
+            disabled={!hasCamera}
+            className={`flex-1 px-3 py-2 text-sm font-medium transition ${
+              viewSource === "camera"
+                ? "text-white bg-gray-700"
+                : hasCamera
+                  ? "text-gray-300 hover:bg-gray-700/50"
+                  : "text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            {cameraLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewSource("screen")}
+            disabled={!hasScreen}
+            className={`flex-1 px-3 py-2 text-sm font-medium transition ${
+              viewSource === "screen"
+                ? "text-white bg-gray-700"
+                : hasScreen
+                  ? "text-gray-300 hover:bg-gray-700/50"
+                  : "text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            {screenLabel}
+          </button>
+        </div>
+      )}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {currentStream != null ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            playsInline
+            className="w-full h-full object-contain"
+            aria-label={videoLabel}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">{loadingLabel}</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /** Внутренний компонент: рендерится только при наличии session, всегда вызывает useAgentSession (правила хуков). */
 type AgentSessionContentProps = {
@@ -273,6 +375,7 @@ type AgentSessionContentProps = {
   onRemoveMemoryItem?: (index: number) => void;
   initialMicOn: boolean;
   initialScreenSharing: boolean;
+  initialCameraOn: boolean;
   handleBack: () => void;
   effectiveOnMicError?: (message: string) => void;
   isRouteMode: boolean;
@@ -294,6 +397,7 @@ const AgentSessionContent = ({
   onRemoveMemoryItem,
   initialMicOn,
   initialScreenSharing,
+  initialCameraOn,
   handleBack,
   effectiveOnMicError,
   isRouteMode,
@@ -311,8 +415,13 @@ const AgentSessionContent = ({
     sessionReady,
     initialMicOn,
     initialScreenSharing,
+    initialCameraOn,
     onMicError: effectiveOnMicError ?? (() => {}),
   });
+
+  useEffect(() => {
+    if (!sessionState.cameraOn && !sessionState.screenSharing) sessionState.setCameraVisible(false);
+  }, [sessionState.cameraOn, sessionState.screenSharing, sessionState.setCameraVisible]);
 
   return (
     <div className={`flex-1 flex flex-col min-h-0 relative ${isRouteMode ? "session-page-in" : ""}`}>
@@ -368,6 +477,33 @@ const AgentSessionContent = ({
           />
         </DraggablePanel>
       )}
+      {(sessionState.cameraOn || sessionState.screenSharing) && sessionState.cameraVisible && (
+        <DraggablePanel
+          title={t("sessionCameraViewTitle")}
+          position={sessionState.cameraPosition}
+          onPositionChange={sessionState.onCameraPositionChange}
+          onClose={() => {
+            sessionState.setCameraVisible(false);
+            sessionState.setCameraCloseRequested(false);
+          }}
+          sizePx={sessionState.cameraSize}
+          onResize={sessionState.onCameraResize}
+          bottomSafeAreaPx={constants.session.bottomPanelOffsetPx}
+          otherPanelBounds={sessionState.dialogVisible ? { x: sessionState.dialogPosition.x, y: sessionState.dialogPosition.y, width: sessionState.dialogSize.width, height: sessionState.dialogSize.height } : sessionState.memoryVisible ? { x: sessionState.memoryPosition.x, y: sessionState.memoryPosition.y, width: sessionState.memorySize.width, height: sessionState.memorySize.height } : null}
+          closeRequested={sessionState.cameraCloseRequested}
+        >
+          <CameraPreviewPanel
+            cameraStream={sessionState.cameraStream}
+            screenStream={sessionState.screenStream}
+            cameraOn={sessionState.cameraOn}
+            screenSharing={sessionState.screenSharing}
+            loadingLabel={t("launchConnecting")}
+            cameraLabel={t("camera")}
+            screenLabel={t("screenShare")}
+            videoLabel={t("sessionCameraViewTitle")}
+          />
+        </DraggablePanel>
+      )}
 
       <SessionToolbar
         micOn={sessionState.micOn}
@@ -398,11 +534,18 @@ const AgentSessionContent = ({
           version={config.appVersion}
           dialogVisible={sessionState.dialogVisible}
           memoryVisible={sessionState.memoryVisible}
+          showPreviewTab={sessionState.cameraOn || sessionState.screenSharing}
+          cameraVisible={sessionState.cameraVisible}
           onDialogTabToggle={sessionState.onDialogTabToggle}
           onMemoryTabToggle={sessionState.onMemoryTabToggle}
+          onCameraTabToggle={sessionState.onCameraTabToggle}
           screenCaptureSettings={sessionState.screenCaptureSettings}
           onScreenCaptureSettingsChange={(patch) =>
             sessionState.setScreenCaptureSettings((prev) => ({ ...prev, ...patch }))
+          }
+          cameraCaptureSettings={sessionState.cameraCaptureSettings}
+          onCameraCaptureSettingsChange={(patch) =>
+            sessionState.setCameraCaptureSettings((prev) => ({ ...prev, ...patch }))
           }
         />
       </div>

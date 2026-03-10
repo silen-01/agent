@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import type { ILiveSession } from "../../../api/index.ts";
-import { language, constants } from "@modules";
+import { language } from "@modules";
 import { blobToBase64 } from "../../../api/utils/audioUtils.ts";
 
-export type ScreenCaptureSettings = {
+/** Те же настройки, что и для трансляции экрана. */
+export type CameraCaptureSettings = {
   width: number;
   height: number;
   jpegQuality: number;
@@ -11,42 +12,44 @@ export type ScreenCaptureSettings = {
   motionThreshold: number;
 };
 
-export type UseScreenCaptureParams = {
+export type UseCameraCaptureParams = {
   session: ILiveSession;
   sessionReady: boolean;
-  initialScreenSharing?: boolean;
+  cameraOn: boolean;
+  setCameraOn: (value: boolean | ((prev: boolean) => boolean)) => void;
+  cameraCaptureSettings: CameraCaptureSettings;
   onError?: (message: string) => void;
 };
 
-export function useScreenCapture({
+/**
+ * Захват камеры и отправка кадров в сессию ИИ (video → canvas → JPEG → sendRealtimeInput).
+ * Включается при cameraOn === true и sessionReady; при ошибке доступа вызывает onError и выключает камеру.
+ */
+export function useCameraCapture({
   session,
   sessionReady,
-  initialScreenSharing = false,
+  cameraOn,
+  setCameraOn,
+  cameraCaptureSettings,
   onError,
-}: UseScreenCaptureParams) {
+}: UseCameraCaptureParams) {
   const { t } = language.useLanguage();
-  const [screenSharing, setScreenSharing] = useState(initialScreenSharing);
-  const [screenCaptureSettings, setScreenCaptureSettings] = useState<ScreenCaptureSettings>(
-    () => ({ ...constants.session.screenCapture })
-  );
-
-  const screenCaptureSettingsRef = useRef<ScreenCaptureSettings>(screenCaptureSettings);
   const onErrorRef = useRef(onError);
   const tRef = useRef(t);
-  const setScreenSharingRef = useRef(setScreenSharing);
+  const setCameraOnRef = useRef(setCameraOn);
+  const cameraCaptureSettingsRef = useRef(cameraCaptureSettings);
   useEffect(() => {
-    screenCaptureSettingsRef.current = screenCaptureSettings;
     onErrorRef.current = onError;
     tRef.current = t;
-    setScreenSharingRef.current = setScreenSharing;
-  }, [screenCaptureSettings, onError, t, setScreenSharing]);
+    setCameraOnRef.current = setCameraOn;
+    cameraCaptureSettingsRef.current = cameraCaptureSettings;
+  }, [onError, t, setCameraOn, cameraCaptureSettings]);
 
-  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
-  const screenStreamRef = useRef<MediaStream | null>(null);
-  const screenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const isProcessingFrameRef = useRef(false);
 
-  // Трансляция экрана в ИИ: getDisplayMedia → video → canvas → JPEG → sendRealtimeInput(media)
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const canvasRef = { current: null as HTMLCanvasElement | null };
@@ -61,16 +64,16 @@ export function useScreenCapture({
       canvasRef.current = null;
       ctxRef.current = null;
       sampleCtxRef.current = null;
-      screenStreamRef.current?.getTracks().forEach((tr) => tr.stop());
-      screenStreamRef.current = null;
-      setScreenStream(null);
-      if (screenVideoRef.current) {
-        screenVideoRef.current.srcObject = null;
-        screenVideoRef.current = null;
+      cameraStreamRef.current?.getTracks().forEach((tr) => tr.stop());
+      cameraStreamRef.current = null;
+      setCameraStream(null);
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = null;
+        cameraVideoRef.current = null;
       }
     };
 
-    if (!session || !sessionReady || !screenSharing) {
+    if (!session || !sessionReady || !cameraOn) {
       cleanup();
       return;
     }
@@ -79,21 +82,22 @@ export function useScreenCapture({
     const sampleSize = 16;
     const numPixels = sampleSize * sampleSize;
     let prevLumas: Uint8Array | null = null;
+    const settings = () => cameraCaptureSettingsRef.current;
 
     const scheduleNext = () => {
       if (cancelled) return;
-      const { fps } = screenCaptureSettingsRef.current;
+      const { fps } = settings();
       timeoutId = setTimeout(tick, 1000 / Math.max(0.5, Math.min(10, fps)));
     };
 
     const tick = () => {
-      if (cancelled || !screenVideoRef.current || isProcessingFrameRef.current) return;
-      const v = screenVideoRef.current;
+      if (cancelled || !cameraVideoRef.current || isProcessingFrameRef.current) return;
+      const v = cameraVideoRef.current;
       if (v.readyState < 2) {
         scheduleNext();
         return;
       }
-      const { width, height, jpegQuality, motionThreshold = 0 } = screenCaptureSettingsRef.current;
+      const { width, height, jpegQuality, motionThreshold = 0 } = settings();
       const canvas = canvasRef.current;
       const ctx = ctxRef.current;
       const sampleCtx = sampleCtxRef.current;
@@ -130,12 +134,12 @@ export function useScreenCapture({
       canvas.toBlob(
         async (blob) => {
           try {
-            if (blob && !cancelled && screenStreamRef.current) {
+            if (blob && !cancelled && cameraStreamRef.current) {
               const base64 = await blobToBase64(blob);
               session.sendRealtimeInput({ media: { data: base64, mimeType: "image/jpeg" } });
             }
           } catch (e) {
-            console.warn("Screen frame send failed:", e);
+            console.warn("Camera frame send failed:", e);
           } finally {
             isProcessingFrameRef.current = false;
           }
@@ -148,19 +152,23 @@ export function useScreenCapture({
 
     const start = async () => {
       try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { frameRate: 10, width: 1280, height: 720 },
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: settings().width },
+            height: { ideal: settings().height },
+            frameRate: { ideal: Math.min(10, settings().fps) },
+          },
         });
         if (cancelled) {
           stream.getTracks().forEach((tr) => tr.stop());
           return;
         }
-        screenStreamRef.current = stream;
-        setScreenStream(stream);
+        cameraStreamRef.current = stream;
+        setCameraStream(stream);
 
         stream.getVideoTracks().forEach((track) => {
           track.onended = () => {
-            setScreenSharingRef.current(false);
+            setCameraOnRef.current(false);
           };
         });
 
@@ -170,7 +178,7 @@ export function useScreenCapture({
         video.srcObject = stream;
         await video.play();
         if (cancelled) return;
-        screenVideoRef.current = video;
+        cameraVideoRef.current = video;
 
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
@@ -190,13 +198,13 @@ export function useScreenCapture({
         scheduleNext();
       } catch (err) {
         if (!cancelled) {
-          setScreenSharingRef.current(false);
+          setCameraOnRef.current(false);
           const msg =
             err instanceof DOMException && err.name === "NotAllowedError"
-              ? tRef.current("screenShareErrorPermission")
+              ? tRef.current("cameraErrorPermission")
               : err instanceof Error
                 ? err.message
-                : tRef.current("screenShareErrorGeneric");
+                : tRef.current("cameraErrorGeneric");
           onErrorRef.current?.(msg);
         }
       }
@@ -207,13 +215,7 @@ export function useScreenCapture({
       cancelled = true;
       cleanup();
     };
-  }, [session, sessionReady, screenSharing]);
+  }, [session, sessionReady, cameraOn, cameraCaptureSettings]);
 
-  return {
-    screenSharing,
-    setScreenSharing,
-    screenStream,
-    screenCaptureSettings,
-    setScreenCaptureSettings,
-  };
+  return { cameraStream };
 }

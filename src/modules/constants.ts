@@ -14,7 +14,7 @@ export const constants = {
   personalities: PERSONALITIES,
   geminiVoices: GEMINI_VOICES,
   controls: {
-    cameraEnabled: false,
+    cameraEnabled: true,
   },
   session: {
     bottomPanelOffsetPx: 120,
@@ -24,6 +24,8 @@ export const constants = {
     defaultDialogSizePx: { width: 22 * 16, height: 18 * 16 },
     /** Размеры панели «Память» по умолчанию (px) */
     defaultMemorySizePx: { width: 20 * 16, height: 16 * 16 },
+    /** Размеры панели «Что видит ИИ» (камера) по умолчанию (px), 16:9 */
+    defaultCameraSizePx: { width: 400, height: 225 },
     /** Трансляция экрана в ИИ (только JPEG). Значения по умолчанию; в сессии можно менять через панель настроек. */
     screenCapture: {
       fps: 4,
@@ -39,6 +41,14 @@ export const constants = {
       { id: "854x480", width: 854, height: 480 },
       { id: "1024x576", width: 1024, height: 576 },
     ] as const,
+    /** Трансляция камеры в ИИ (JPEG). Те же параметры, что у экрана. */
+    cameraCapture: {
+      fps: 4,
+      width: 640,
+      height: 360,
+      jpegQuality: 0.7,
+      motionThreshold: 0.03,
+    },
   },
   draggablePanel: {
     paddingPx: 8,

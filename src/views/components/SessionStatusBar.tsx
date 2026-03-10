@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Wifi, Brain, MessageSquare, BookOpen, Volume2, Mic, Monitor } from "lucide-react";
+import { Wifi, Brain, MessageSquare, BookOpen, Volume2, Mic, Monitor, Video } from "lucide-react";
 import { language, constants } from "@modules";
-import type { ScreenCaptureSettings } from "../hooks/useAgentSession";
+import type { ScreenCaptureSettings, CameraCaptureSettings } from "../hooks/useAgentSession";
 
 /** Усиление микрофона: 0.5–4 (в UI показывается как 50–400%) */
 export const MIC_SENSITIVITY_MIN = 50;
@@ -22,14 +22,21 @@ export type SessionStatusBarProps = {
   onMicSensitivityChange?: (multiplier: number) => void;
   /** Версия приложения (справа) */
   version?: string;
-  /** Вкладки: показать/скрыть панели Диалог и Память (по центру панели) */
+  /** Вкладки: показать/скрыть панели Диалог, Память, «Что видит ИИ» (по центру панели) */
   dialogVisible?: boolean;
   memoryVisible?: boolean;
+  /** Показывать вкладку «Что видит ИИ» (камера и/или экран включены) */
+  showPreviewTab?: boolean;
+  cameraVisible?: boolean;
   onDialogTabToggle?: () => void;
   onMemoryTabToggle?: () => void;
+  onCameraTabToggle?: () => void;
   /** Настройки трансляции экрана (для панели по клику на иконку монитора) */
   screenCaptureSettings?: ScreenCaptureSettings;
   onScreenCaptureSettingsChange?: (patch: Partial<ScreenCaptureSettings>) => void;
+  /** Настройки трансляции камеры (для панели по клику на иконку камеры) */
+  cameraCaptureSettings?: CameraCaptureSettings;
+  onCameraCaptureSettingsChange?: (patch: Partial<CameraCaptureSettings>) => void;
 };
 
 export const SessionStatusBar = ({
@@ -42,18 +49,25 @@ export const SessionStatusBar = ({
   version,
   dialogVisible = false,
   memoryVisible = false,
+  showPreviewTab = false,
+  cameraVisible = false,
   onDialogTabToggle,
   onMemoryTabToggle,
+  onCameraTabToggle,
   screenCaptureSettings,
   onScreenCaptureSettingsChange,
+  cameraCaptureSettings,
+  onCameraCaptureSettingsChange,
 }: SessionStatusBarProps) => {
   const { t } = language.useLanguage();
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [showMicSlider, setShowMicSlider] = useState(false);
   const [showScreenCapturePanel, setShowScreenCapturePanel] = useState(false);
+  const [showCameraCapturePanel, setShowCameraCapturePanel] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
   const micRef = useRef<HTMLDivElement>(null);
   const screenCaptureRef = useRef<HTMLDivElement>(null);
+  const cameraCaptureRef = useRef<HTMLDivElement>(null);
   const presets = constants.session.screenCapturePresets;
 
   const micSensitivityPercent = Math.round(micSensitivity * 100);
@@ -91,10 +105,26 @@ export const SessionStatusBar = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showScreenCapturePanel]);
 
+  useEffect(() => {
+    if (!showCameraCapturePanel) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (cameraCaptureRef.current && !cameraCaptureRef.current.contains(e.target as Node)) {
+        setShowCameraCapturePanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showCameraCapturePanel]);
+
   const currentPresetId =
     screenCaptureSettings && presets.find((p) => p.width === screenCaptureSettings.width && p.height === screenCaptureSettings.height)
       ? `${screenCaptureSettings.width}x${screenCaptureSettings.height}`
       : presets[0]?.id ?? "768x432";
+
+  const currentCameraPresetId =
+    cameraCaptureSettings && presets.find((p) => p.width === cameraCaptureSettings.width && p.height === cameraCaptureSettings.height)
+      ? `${cameraCaptureSettings.width}x${cameraCaptureSettings.height}`
+      : presets[0]?.id ?? "640x360";
 
   return (
     <div className="shrink-0 relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-[#111827] border border-gray-700">
@@ -157,6 +187,84 @@ export const SessionStatusBar = ({
                     className="session-status-volume-slider"
                     aria-label={t("sessionMicSensitivity")}
                   />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {onCameraCaptureSettingsChange != null && cameraCaptureSettings != null && (
+          <div className="relative shrink-0" ref={cameraCaptureRef}>
+            <button
+              type="button"
+              onClick={() => setShowCameraCapturePanel((v) => !v)}
+              className="flex items-center justify-center p-1.5 sm:p-1 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition touch-manipulation"
+              title={t("sessionCameraCaptureTitle")}
+              aria-label={t("sessionCameraCaptureTitle")}
+              aria-expanded={showCameraCapturePanel}
+            >
+              <Video size={20} className="sm:w-[18px] sm:h-[18px]" />
+            </button>
+            {showCameraCapturePanel && (
+              <div className="absolute bottom-full left-0 mb-5 rounded-xl bg-[#111827] border border-gray-700 shadow-xl z-50 p-4 w-64">
+                <h3 className="text-sm font-semibold text-white mb-3">{t("sessionCameraCaptureTitle")}</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">{t("sessionScreenCaptureResolution")}</label>
+                    <select
+                      value={currentCameraPresetId}
+                      onChange={(e) => {
+                        const p = presets.find((x) => x.id === e.target.value);
+                        if (p) onCameraCaptureSettingsChange({ width: p.width, height: p.height });
+                      }}
+                      className="w-full rounded-lg bg-gray-800 border border-gray-600 text-white text-sm px-2 py-1.5"
+                    >
+                      {presets.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.width}×{p.height}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">
+                      {t("sessionScreenCaptureQuality")} — {Math.round((cameraCaptureSettings.jpegQuality ?? 0.7) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={Math.round((cameraCaptureSettings.jpegQuality ?? 0.7) * 100)}
+                      onChange={(e) => onCameraCaptureSettingsChange({ jpegQuality: Number(e.target.value) / 100 })}
+                      className="w-full h-2 rounded-lg appearance-none bg-gray-700 accent-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">
+                      {t("sessionScreenCaptureFps")} — {cameraCaptureSettings.fps ?? 4}
+                    </label>
+                    <input
+                      type="range"
+                      min={1}
+                      max={6}
+                      value={cameraCaptureSettings.fps ?? 4}
+                      onChange={(e) => onCameraCaptureSettingsChange({ fps: Number(e.target.value) })}
+                      className="w-full h-2 rounded-lg appearance-none bg-gray-700 accent-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">
+                      {t("sessionScreenCaptureSkipStatic")} — {Math.round(((cameraCaptureSettings.motionThreshold ?? 0) / 0.15) * 100)}%
+                    </label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={Math.round(((cameraCaptureSettings.motionThreshold ?? 0) / 0.15) * 100)}
+                      onChange={(e) => onCameraCaptureSettingsChange({ motionThreshold: (Number(e.target.value) / 100) * 0.15 })}
+                      className="w-full h-2 rounded-lg appearance-none bg-gray-700 accent-blue-500"
+                    />
+                    <p className="text-[10px] text-gray-500 mt-0.5">{t("sessionScreenCaptureSkipStaticHint")}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -313,6 +421,21 @@ export const SessionStatusBar = ({
           <BookOpen size={18} className="shrink-0 sm:w-4 sm:h-4" />
           <span className="truncate">{t("memoryTitle")}</span>
         </button>
+        {showPreviewTab && onCameraTabToggle != null && (
+          <button
+            type="button"
+            onClick={onCameraTabToggle}
+            className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition touch-manipulation ${
+              cameraVisible
+                ? "text-gray-200 bg-gray-700/70"
+                : "text-gray-500 hover:text-gray-300 hover:bg-gray-700/40"
+            }`}
+            title={t("sessionCameraViewTitle")}
+          >
+            <Video size={18} className="shrink-0 sm:w-4 sm:h-4" />
+            <span className="truncate">{t("sessionCameraViewTitle")}</span>
+          </button>
+        )}
       </div>
       <div className="hidden sm:flex items-center gap-3 min-w-0 flex-1 justify-end">
         {version != null && version !== "" && (

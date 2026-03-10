@@ -83,8 +83,8 @@ export const SessionToolbar = ({
           cameraDisabled
             ? "border-gray-700 bg-gray-800/50 text-gray-600 cursor-not-allowed"
             : cameraOn
-              ? "border-blue-500/50 bg-blue-500/20 text-blue-400"
-              : "border-gray-600 bg-gray-700/50 hover:bg-gray-700 text-white"
+              ? "border-gray-600 bg-gray-700/50 hover:bg-gray-700 text-white"
+              : "border-blue-500/50 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
         }`}
         title={cameraDisabled ? t("sessionToolbarCameraOff") : t("sessionToolbarCamera")}
       >
