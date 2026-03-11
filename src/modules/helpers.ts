@@ -100,9 +100,14 @@ export const extractMemoryItemsFromText = (text: string): string[] => {
   return out;
 };
 
-/** Заменить в тексте [MEMORY: факт] на сам факт (для отображения в диалоге — маркер убирается, содержание остаётся). */
+/** Полностью убрать из текста блоки [MEMORY: факт] для отображения в диалоге. */
 export const stripMemoryMarkersFromText = (text: string): string => {
-  return text.replace(/\[\s*MEMORY\s*:\s*([^\]]+)\]/gi, "$1").replace(/\s{2,}/g, " ").trim();
+  return text
+    .replace(/\s*\[\s*MEMORY\s*:\s*[^\]]+\]\s*/gi, " ")
+    .replace(/\s+([.,!?;:])/g, "$1")
+    .replace(/([,;:])([.!?])/g, "$2")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 };
 
 /** Подставить в строку плейсхолдеры {seconds}, {emotionality}, {items}. */

@@ -1,11 +1,16 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { getGeminiApiKey } from "@modules";
 import { createLiveClient, type ILiveSession } from "../../index.ts";
-import type { LiveCloseEvent, LiveMessagePayload } from "../../types/index.ts";
+import type {
+  LiveCloseEvent,
+  LiveMessagePayload,
+  RealtimeInputPayload,
+} from "../../types/index.ts";
 
 /** 100% = 1 MB/с (сумма отправки + приёма по этому соединению). */
 const NETWORK_LOAD_SCALE_BYTES_PER_SEC = 1048576;
 const NETWORK_LOAD_FLOOR_BYTES_PER_SEC = 32768;
+const NETWORK_ACTIVITY_SMOOTHING = 0.35;
 const RECONNECT_DELAY_MS = 2000;
 const RECONNECT_MAX_ATTEMPTS = 5;
 const DEFAULT_AUTO_REACTION_TEXT =
@@ -50,6 +55,40 @@ export type UseLiveSessionConnectionParams = {
   onSessionRestored?: () => void;
 };
 
+export type NetworkTrafficStats = {
+  txBytesPerSecond: number;
+  rxBytesPerSecond: number;
+  totalBytesPerSecond: number;
+};
+
+const EMPTY_NETWORK_TRAFFIC_STATS: NetworkTrafficStats = {
+  txBytesPerSecond: 0,
+  rxBytesPerSecond: 0,
+  totalBytesPerSecond: 0,
+};
+
+function estimateSerializedBytes(value: unknown): number {
+  try {
+    const json = JSON.stringify(value);
+    return json ? new TextEncoder().encode(json).length : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function estimateRealtimeInputTransportBytes(payload: RealtimeInputPayload): number {
+  if ("media" in payload && payload.media instanceof Blob) {
+    return payload.media.size + 128;
+  }
+  return estimateSerializedBytes(payload);
+}
+
+function smoothBytes(prev: number, next: number): number {
+  if (prev === 0) return next;
+  const smoothed = prev * (1 - NETWORK_ACTIVITY_SMOOTHING) + next * NETWORK_ACTIVITY_SMOOTHING;
+  return smoothed < 1 ? 0 : Math.round(smoothed);
+}
+
 export function useLiveSessionConnection({
   handleMessageRef,
   onDisconnect,
@@ -61,9 +100,14 @@ export function useLiveSessionConnection({
   const [hasHadSession, setHasHadSession] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [networkLoadPercent, setNetworkLoadPercent] = useState(0);
+  const [networkTrafficStats, setNetworkTrafficStats] = useState<NetworkTrafficStats>(
+    EMPTY_NETWORK_TRAFFIC_STATS
+  );
 
   const bytesSentInWindowRef = useRef(0);
   const bytesReceivedInWindowRef = useRef(0);
+  const smoothedSentBytesPerSecondRef = useRef(0);
+  const smoothedReceivedBytesPerSecondRef = useRef(0);
   const sessionRef = useRef<ILiveSession | null>(null);
   const publicSessionRef = useRef<ILiveSession | null>(null);
   const lastLaunchParamsRef = useRef<LastLaunchParams | null>(null);
@@ -118,16 +162,7 @@ export function useLiveSessionConnection({
   const wrapSession = useCallback(
     (rawSession: ILiveSession): ILiveSession => ({
       sendRealtimeInput(payload) {
-        let bytes = 0;
-        if ("audio" in payload && payload.audio?.data)
-          bytes = (payload.audio.data.length * 3) >> 2;
-        else if ("text" in payload && payload.text)
-          bytes = new TextEncoder().encode(payload.text).length;
-        else if ("media" in payload && payload.media) {
-          const m = payload.media;
-          if (typeof (m as { data?: string }).data === "string")
-            bytes = ((m as { data: string }).data.length * 3) >> 2;
-        }
+        const bytes = estimateRealtimeInputTransportBytes(payload);
         bytesSentInWindowRef.current += bytes;
         try {
           rawSession.sendRealtimeInput(payload);
@@ -284,8 +319,14 @@ export function useLiveSessionConnection({
       setConnectionError(null);
       reconnectDisabledRef.current = false;
       reconnectAttemptRef.current = 0;
+      bytesSentInWindowRef.current = 0;
+      bytesReceivedInWindowRef.current = 0;
+      smoothedSentBytesPerSecondRef.current = 0;
+      smoothedReceivedBytesPerSecondRef.current = 0;
       setIsConnecting(true);
       setSessionReady(false);
+      setNetworkLoadPercent(0);
+      setNetworkTrafficStats(EMPTY_NETWORK_TRAFFIC_STATS);
 
       reactionTimeoutSecondsRef.current = Math.max(
         1,
@@ -402,6 +443,10 @@ export function useLiveSessionConnection({
     lastLaunchParamsRef.current = null;
     resumptionHandleRef.current = null;
     firstMessageReceivedRef.current = false;
+    bytesSentInWindowRef.current = 0;
+    bytesReceivedInWindowRef.current = 0;
+    smoothedSentBytesPerSecondRef.current = 0;
+    smoothedReceivedBytesPerSecondRef.current = 0;
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
@@ -411,6 +456,8 @@ export function useLiveSessionConnection({
     setSession(null);
     setSessionReady(false);
     setIsConnecting(false);
+    setNetworkLoadPercent(0);
+    setNetworkTrafficStats(EMPTY_NETWORK_TRAFFIC_STATS);
     onDisconnect?.();
   }, [onDisconnect]);
 
@@ -420,7 +467,11 @@ export function useLiveSessionConnection({
       const received = bytesReceivedInWindowRef.current;
       bytesSentInWindowRef.current = 0;
       bytesReceivedInWindowRef.current = 0;
-      const bytesPerSecond = sent + received;
+      const smoothedSent = smoothBytes(smoothedSentBytesPerSecondRef.current, sent);
+      const smoothedReceived = smoothBytes(smoothedReceivedBytesPerSecondRef.current, received);
+      smoothedSentBytesPerSecondRef.current = smoothedSent;
+      smoothedReceivedBytesPerSecondRef.current = smoothedReceived;
+      const bytesPerSecond = smoothedSent + smoothedReceived;
       const percent =
         bytesPerSecond <= NETWORK_LOAD_FLOOR_BYTES_PER_SEC
           ? 0
@@ -432,6 +483,11 @@ export function useLiveSessionConnection({
                   100
               )
             );
+      setNetworkTrafficStats({
+        txBytesPerSecond: smoothedSent,
+        rxBytesPerSecond: smoothedReceived,
+        totalBytesPerSecond: bytesPerSecond,
+      });
       setNetworkLoadPercent(percent);
     }, 1000);
     return () => clearInterval(interval);
@@ -471,6 +527,7 @@ export function useLiveSessionConnection({
     connectionError,
     setConnectionError,
     networkLoadPercent,
+    networkTrafficStats,
     recordReceivedBytes,
     markModelActivity,
     launch,

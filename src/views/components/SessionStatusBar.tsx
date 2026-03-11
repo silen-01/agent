@@ -13,6 +13,11 @@ export type ConnectionStatus = "connected" | "reconnecting" | "disconnected";
 
 export type SessionStatusBarProps = {
   networkLoadPercent?: number;
+  networkTrafficStats?: {
+    txBytesPerSecond: number;
+    rxBytesPerSecond: number;
+    totalBytesPerSecond: number;
+  };
   /** Подключен (синий) / Переподключение (оранжевый) / Соединение разорвано (красный) */
   connectionStatus?: ConnectionStatus;
   /** Громкость вывода ИИ 0–100 */
@@ -40,8 +45,24 @@ export type SessionStatusBarProps = {
   onCameraCaptureSettingsChange?: (patch: Partial<CameraCaptureSettings>) => void;
 };
 
+function formatTrafficRate(bytesPerSecond: number): string {
+  if (bytesPerSecond >= 1024 * 1024) {
+    return `${(bytesPerSecond / (1024 * 1024)).toFixed(2)} MB/s`;
+  }
+  if (bytesPerSecond >= 1024) {
+    const kbPerSecond = bytesPerSecond / 1024;
+    return `${kbPerSecond >= 100 ? kbPerSecond.toFixed(0) : kbPerSecond.toFixed(1)} KB/s`;
+  }
+  return `${bytesPerSecond} B/s`;
+}
+
 export const SessionStatusBar = ({
   networkLoadPercent = 0,
+  networkTrafficStats = {
+    txBytesPerSecond: 0,
+    rxBytesPerSecond: 0,
+    totalBytesPerSecond: 0,
+  },
   connectionStatus = "connected",
   aiVolumePercent = 80,
   onAiVolumeChange,
@@ -469,16 +490,34 @@ export const SessionStatusBar = ({
             <Wifi size={20} className={`sm:w-[18px] sm:h-[18px] ${networkStatusColorClass}`} />
           </button>
           {showNetworkStatusPanel && (
-            <div className="absolute bottom-full left-1/2 z-50 mb-5 w-40 -translate-x-1/2 rounded-xl border border-gray-700 bg-[#111827] p-3 shadow-xl">
+            <div className="absolute bottom-full left-1/2 z-50 mb-5 w-52 -translate-x-1/2 rounded-xl border border-gray-700 bg-[#111827] p-3 shadow-xl">
               <div className="text-xs text-gray-500">{t("sessionStatusNetwork")}</div>
               <div className={`mt-1 text-sm font-medium tabular-nums ${networkStatusColorClass}`}>
                 {networkLoadPercent}%
               </div>
+              <div className="text-[10px] text-gray-500">{t("sessionStatusNetworkActivity")}</div>
               <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
                 <div
                   className={`h-full rounded-full transition-[width] ${networkStatusFillClass}`}
                   style={{ width: `${networkLoadPercent}%` }}
                 />
+              </div>
+              <div className="mt-2 space-y-1 text-xs tabular-nums text-gray-300">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-gray-500">{t("sessionStatusNetworkOutgoing")}</span>
+                  <span>{formatTrafficRate(networkTrafficStats.txBytesPerSecond)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-gray-500">{t("sessionStatusNetworkIncoming")}</span>
+                  <span>{formatTrafficRate(networkTrafficStats.rxBytesPerSecond)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-gray-500">{t("sessionStatusNetworkTotal")}</span>
+                  <span>{formatTrafficRate(networkTrafficStats.totalBytesPerSecond)}</span>
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] leading-4 text-gray-500">
+                {t("sessionStatusNetworkHint")}
               </div>
             </div>
           )}

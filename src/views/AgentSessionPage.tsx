@@ -36,6 +36,11 @@ export type AgentSessionPageProps = {
   outputTranscription?: string;
   setOutputVolume?: (volumeNormalized: number) => void;
   networkLoadPercent?: number;
+  networkTrafficStats?: {
+    txBytesPerSecond: number;
+    rxBytesPerSecond: number;
+    totalBytesPerSecond: number;
+  };
   memoryItems?: string[];
   onClearMemory?: () => void;
   onRemoveMemoryItem?: (index: number) => void;
@@ -57,6 +62,11 @@ export const AgentSessionPage = ({
   outputTranscription: outputTranscriptionProp = "",
   setOutputVolume: setOutputVolumeProp,
   networkLoadPercent: networkLoadPercentProp = 0,
+  networkTrafficStats: networkTrafficStatsProp = {
+    txBytesPerSecond: 0,
+    rxBytesPerSecond: 0,
+    totalBytesPerSecond: 0,
+  },
   memoryItems: memoryItemsProp,
   onClearMemory: onClearMemoryProp,
   onRemoveMemoryItem: onRemoveMemoryItemProp,
@@ -109,6 +119,7 @@ export const AgentSessionPage = ({
     connectionError: liveConnectionError,
     setOutputVolume: liveSetOutputVolume,
     networkLoadPercent: liveNetworkLoadPercent,
+    networkTrafficStats: liveNetworkTrafficStats,
     launch,
     disconnect,
   } = liveHook;
@@ -168,6 +179,8 @@ export const AgentSessionPage = ({
   const outputTranscription = sessionProp !== undefined ? outputTranscriptionProp : liveOutputTranscription;
   const setOutputVolume = sessionProp !== undefined ? setOutputVolumeProp : liveSetOutputVolume;
   const networkLoadPercent = sessionProp !== undefined ? networkLoadPercentProp : liveNetworkLoadPercent;
+  const networkTrafficStats =
+    sessionProp !== undefined ? networkTrafficStatsProp : liveNetworkTrafficStats;
   const s = routeSettings;
   const initialMicOn = sessionProp !== undefined ? initialMicOnProp : (s?.microphone ?? true);
   const initialScreenSharing = sessionProp !== undefined ? initialScreenSharingProp : (s?.screenShare ?? false);
@@ -248,6 +261,7 @@ export const AgentSessionPage = ({
       outputTranscription={outputTranscription}
       setOutputVolume={setOutputVolume}
       networkLoadPercent={networkLoadPercent}
+      networkTrafficStats={networkTrafficStats}
       memoryItems={memoryItems}
       onClearMemory={handleClearMemory}
       onRemoveMemoryItem={handleRemoveMemoryItem}
@@ -384,6 +398,11 @@ type AgentSessionContentProps = {
   outputTranscription: string;
   setOutputVolume?: (volumeNormalized: number) => void;
   networkLoadPercent: number;
+  networkTrafficStats: {
+    txBytesPerSecond: number;
+    rxBytesPerSecond: number;
+    totalBytesPerSecond: number;
+  };
   memoryItems: string[];
   onClearMemory?: () => void;
   onRemoveMemoryItem?: (index: number) => void;
@@ -406,6 +425,7 @@ const AgentSessionContent = ({
   outputTranscription,
   setOutputVolume,
   networkLoadPercent,
+  networkTrafficStats,
   memoryItems,
   onClearMemory,
   onRemoveMemoryItem,
@@ -539,6 +559,7 @@ const AgentSessionContent = ({
       <div className="shrink-0 mt-1">
         <SessionStatusBar
           networkLoadPercent={networkLoadPercent}
+          networkTrafficStats={networkTrafficStats}
           connectionStatus={connectionStatus}
           aiVolumePercent={sessionState.aiVolumePercent}
           onAiVolumeChange={(p) => {

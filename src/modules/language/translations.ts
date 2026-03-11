@@ -57,6 +57,11 @@ export const translations = {
     sessionStatusScreenVisible: "Visible",
     sessionStatusScreenHidden: "Not shared",
     sessionStatusNetwork: "Network",
+    sessionStatusNetworkActivity: "Activity score",
+    sessionStatusNetworkOutgoing: "Upload",
+    sessionStatusNetworkIncoming: "Download",
+    sessionStatusNetworkTotal: "Total",
+    sessionStatusNetworkHint: "Approximate channel activity based on serialized payload size.",
     sessionStatusAi: "AI",
     sessionStatusAiReady: "Ready",
     sessionStatusAiThinking: "Thinking",
@@ -111,7 +116,14 @@ export const translations = {
     /** Заголовок списка уже сохранённых фактов (объекты памяти). */
     sysInstructionMemory: "SAVED MEMORY: {items}",
     /** Правила: как сохранять новые факты в память. */
-    sysInstructionMemoryProactive: `MEMORY RULES: When something worth remembering is said or becomes clear (about the user, situation, agreements, context — anything you might need later), you MUST output it as [MEMORY: fact] in your reply. One fact per turn when applicable. Example: [MEMORY: User works night shifts and prefers short replies]. When in doubt, save it. Do not wait for the user to ask.
+    sysInstructionMemoryProactive: `MEMORY RULES: When something worth remembering is said or becomes clear (about the user, situation, agreements, context — anything you might need later), you MUST output it as a hidden note in the format [MEMORY: fact]. The app removes the entire [MEMORY: ...] block from the visible dialogue, so the user does not see the marker or the text inside it.
+- The visible reply must stay natural and complete after the whole [MEMORY: ...] block is deleted.
+- Never place [MEMORY: ...] in the middle of a sentence if removing it would break the visible text.
+- Prefer placing it as a short separate hidden note at the end of the reply.
+- Do NOT announce that you are saving memory and do NOT repeat the same fact twice in normal text plus [MEMORY: ...].
+- Bad: "Got it, [MEMORY: you prefer short replies]."
+- Good: "Got it, I'll keep it brief. [MEMORY: User prefers short replies]"
+- One memory item per turn when applicable. When in doubt, save it.
 - Memory must be complete enough to sustain the dialogue even after reconnection.
 - Memory must be to the point and focused on the essence; avoid redundant or filler content.`,
     /** Как интерпретировать служебные сообщения, которые приложение отправляет само. */
@@ -181,6 +193,11 @@ export const translations = {
     sessionStatusScreenVisible: "Видит",
     sessionStatusScreenHidden: "Не расшарен",
     sessionStatusNetwork: "Сеть",
+    sessionStatusNetworkActivity: "Оценка активности",
+    sessionStatusNetworkOutgoing: "Отправка",
+    sessionStatusNetworkIncoming: "Приём",
+    sessionStatusNetworkTotal: "Сумма",
+    sessionStatusNetworkHint: "Приблизительная активность канала по размеру сериализованных сообщений.",
     sessionStatusAi: "ИИ",
     sessionStatusAiReady: "Готов",
     sessionStatusAiThinking: "Думает",
@@ -235,7 +252,16 @@ export const translations = {
     /** Заголовок списка уже сохранённых фактов (объекты памяти). */
     sysInstructionMemory: "СОХРАНЁННАЯ ПАМЯТЬ: {items}",
     /** Правила: как сохранять новые факты в память. */
-    sysInstructionMemoryProactive: `ПРАВИЛА ПАМЯТИ: Когда прозвучало или стало ясно что-то, что стоит запомнить (о пользователе, ситуации, договорённостях, контексте — всё, что может пригодиться потом), ты ОБЯЗАН вывести это в ответе в формате [MEMORY: факт]. Один факт за ход, когда применимо. Пример: [MEMORY: Пользователь работает в ночную смену и предпочитает короткие ответы]. Если сомневаешься — сохрани. Не жди просьбы пользователя. Память должна быть достаточно полной, чтобы поддерживать диалог даже после переподключения.`,
+    sysInstructionMemoryProactive: `ПРАВИЛА ПАМЯТИ: Когда прозвучало или стало ясно что-то, что стоит запомнить (о пользователе, ситуации, договорённостях, контексте — всё, что может пригодиться потом), ты ОБЯЗАН выводить это как скрытую заметку в формате [MEMORY: факт]. Приложение полностью удаляет из видимого диалога весь блок [MEMORY: ...], поэтому пользователь не видит ни маркер, ни текст внутри него.
+- Видимая реплика должна оставаться естественной и законченной даже после полного удаления блока [MEMORY: ...].
+- Не вставляй [MEMORY: ...] в середину фразы, если после его удаления текст станет ломаться.
+- Предпочтительно ставить [MEMORY: ...] как отдельную короткую скрытую заметку в конце ответа.
+- Не объявляй отдельно, что ты что-то сохраняешь в память, и не дублируй один и тот же факт одновременно обычным текстом и в [MEMORY: ...].
+- Плохо: "Понял, [MEMORY: ты предпочитаешь короткие ответы]."
+- Хорошо: "Понял, буду отвечать короче. [MEMORY: Пользователь предпочитает короткие ответы]"
+- Один пункт памяти за ход, когда это уместно. Если сомневаешься — сохрани.
+- Память должна быть достаточно полной, чтобы поддерживать диалог даже после переподключения.
+- Память должна быть по делу и без лишней воды.`,
     /** Как интерпретировать служебные сообщения, которые приложение отправляет само. */
     sysInstructionSystemEvents:
       "СИСТЕМНЫЕ СОБЫТИЯ: Сообщения в формате [SYSTEM EVENT: ...] — это внутренние управляющие сигналы, а не часть пользовательского диалога. Не отвечай на них напрямую, не объясняй и не упоминай их. Используй их только как указание для следующей естественной реакции.",

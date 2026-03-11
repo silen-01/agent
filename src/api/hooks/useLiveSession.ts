@@ -12,20 +12,13 @@ export type UseLiveSessionOptions = {
 
 export type DialogMessage = { role: "user" | "model"; text: string };
 
-function estimateMessageSize(message: LiveMessagePayload): number {
-  let bytes = 200;
-  if (message.modelTurn?.parts) {
-    for (const part of message.modelTurn.parts) {
-      const data = part.inlineData?.data;
-      if (typeof data === "string") bytes += (data.length * 3) >> 2;
-    }
+function estimateMessageTransportBytes(message: LiveMessagePayload): number {
+  try {
+    const json = JSON.stringify(message);
+    return json ? new TextEncoder().encode(json).length : 0;
+  } catch {
+    return 0;
   }
-  if (message.audioChunks?.length) {
-    for (const chunk of message.audioChunks) {
-      if (chunk.data) bytes += (chunk.data.length * 3) >> 2;
-    }
-  }
-  return bytes;
 }
 
 export const useLiveSession = (options: UseLiveSessionOptions = {}) => {
@@ -62,7 +55,7 @@ export const useLiveSession = (options: UseLiveSessionOptions = {}) => {
   const handleMessage = useCallback(
     (message: LiveMessagePayload) => {
       connection.markSessionReady();
-      connection.recordReceivedBytes(estimateMessageSize(message));
+      connection.recordReceivedBytes(estimateMessageTransportBytes(message));
       const hasModelOutput =
         message.outputTranscription?.text !== undefined ||
         (message.modelTurn?.parts?.length ?? 0) > 0 ||
@@ -137,6 +130,7 @@ export const useLiveSession = (options: UseLiveSessionOptions = {}) => {
     stopAllPlayback: audio.stopAllPlayback,
     unlockOutputAudio: audio.unlockOutputAudio,
     networkLoadPercent: connection.networkLoadPercent,
+    networkTrafficStats: connection.networkTrafficStats,
     launch: connection.launch,
     disconnect: connection.disconnect,
   };
