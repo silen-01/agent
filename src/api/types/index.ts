@@ -27,17 +27,26 @@ export interface LiveCloseEvent {
   reason?: string;
 }
 
+export interface SessionResumptionUpdate {
+  newHandle?: string;
+  resumable?: boolean;
+}
+
 export interface LiveConnectionCallbacks {
   onopen?: () => void;
   onclose?: (e?: LiveCloseEvent) => void;
   onerror?: (error: unknown) => void;
   onmessage?: (message: LiveMessagePayload) => void;
+  /** Вызывается при получении SessionResumptionUpdate от сервера (для сохранения handle при reconnect). */
+  onSessionResumptionUpdate?: (update: SessionResumptionUpdate) => void;
 }
 
 export interface LiveConnectionConfig {
   systemInstruction: string;
   model?: string;
   voiceName?: string;
+  /** Handle для возобновления сессии (при reconnect). */
+  resumptionHandle?: string;
   callbacks?: LiveConnectionCallbacks;
 }
 

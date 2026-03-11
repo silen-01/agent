@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { ILiveSession } from "../../../api/index.ts";
 import { language, constants } from "@modules";
 import { blobToBase64 } from "../../../api/utils/audioUtils.ts";
+import { isScreenShareAvailable } from "../../screenShareSupport.ts";
 
 export type ScreenCaptureSettings = {
   width: number;
@@ -25,21 +26,45 @@ export function useScreenCapture({
   onError,
 }: UseScreenCaptureParams) {
   const { t } = language.useLanguage();
-  const [screenSharing, setScreenSharing] = useState(initialScreenSharing);
+  const screenShareAvailable = isScreenShareAvailable();
+  const [screenSharingState, setScreenSharingState] = useState(
+    () => initialScreenSharing && screenShareAvailable
+  );
   const [screenCaptureSettings, setScreenCaptureSettings] = useState<ScreenCaptureSettings>(
     () => ({ ...constants.session.screenCapture })
   );
+  const setScreenSharing = useCallback(
+    (value: boolean | ((prev: boolean) => boolean)) => {
+      if (!screenShareAvailable) {
+        setScreenSharingState(false);
+        return;
+      }
+      setScreenSharingState(value);
+    },
+    [screenShareAvailable]
+  );
+  const screenSharing = screenShareAvailable ? screenSharingState : false;
 
+  const sessionRef = useRef(session);
+  const sessionReadyRef = useRef(sessionReady);
   const screenCaptureSettingsRef = useRef<ScreenCaptureSettings>(screenCaptureSettings);
   const onErrorRef = useRef(onError);
   const tRef = useRef(t);
   const setScreenSharingRef = useRef(setScreenSharing);
   useEffect(() => {
+    sessionRef.current = session;
+    sessionReadyRef.current = sessionReady;
     screenCaptureSettingsRef.current = screenCaptureSettings;
     onErrorRef.current = onError;
     tRef.current = t;
     setScreenSharingRef.current = setScreenSharing;
-  }, [screenCaptureSettings, onError, t, setScreenSharing]);
+  }, [session, sessionReady, screenCaptureSettings, onError, t, setScreenSharing]);
+
+  useEffect(() => {
+    if (!screenShareAvailable) {
+      setScreenSharingState(false);
+    }
+  }, [screenShareAvailable]);
 
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -70,7 +95,7 @@ export function useScreenCapture({
       }
     };
 
-    if (!session || !sessionReady || !screenSharing) {
+    if (!screenShareAvailable || !screenSharing) {
       cleanup();
       return;
     }
@@ -90,6 +115,11 @@ export function useScreenCapture({
       if (cancelled || !screenVideoRef.current || isProcessingFrameRef.current) return;
       const v = screenVideoRef.current;
       if (v.readyState < 2) {
+        scheduleNext();
+        return;
+      }
+      const currentSession = sessionRef.current;
+      if (!currentSession || !sessionReadyRef.current) {
         scheduleNext();
         return;
       }
@@ -130,9 +160,16 @@ export function useScreenCapture({
       canvas.toBlob(
         async (blob) => {
           try {
-            if (blob && !cancelled && screenStreamRef.current) {
+            const activeSession = sessionRef.current;
+            if (
+              blob &&
+              !cancelled &&
+              screenStreamRef.current &&
+              activeSession &&
+              sessionReadyRef.current
+            ) {
               const base64 = await blobToBase64(blob);
-              session.sendRealtimeInput({ media: { data: base64, mimeType: "image/jpeg" } });
+              activeSession.sendRealtimeInput({ media: { data: base64, mimeType: "image/jpeg" } });
             }
           } catch (e) {
             console.warn("Screen frame send failed:", e);
@@ -207,10 +244,11 @@ export function useScreenCapture({
       cancelled = true;
       cleanup();
     };
-  }, [session, sessionReady, screenSharing]);
+  }, [screenShareAvailable, screenSharing]);
 
   return {
     screenSharing,
+    screenShareAvailable,
     setScreenSharing,
     screenStream,
     screenCaptureSettings,

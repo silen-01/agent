@@ -1,6 +1,7 @@
 import { type AgentSettings } from "@types";
 import { constants } from "@modules";
 import { language } from "@modules";
+import { isScreenShareAvailable } from "../screenShareSupport.ts";
 
 const ToggleRow = ({
   label,
@@ -52,6 +53,7 @@ export const ControlsCard = ({
   onSettingsChange: (patch: Partial<Pick<AgentSettings, "microphone" | "screenShare" | "camera">>) => void;
 }) => {
   const { t } = language.useLanguage();
+  const screenShareAvailable = isScreenShareAvailable();
 
   return (
     <div className="min-w-0 flex flex-col">
@@ -63,11 +65,13 @@ export const ControlsCard = ({
             value={settings.microphone}
             onChange={(v) => onSettingsChange({ microphone: v })}
           />
-          <ToggleRow
-            label={t("screenShare")}
-            value={settings.screenShare}
-            onChange={(v) => onSettingsChange({ screenShare: v })}
-          />
+          {screenShareAvailable && (
+            <ToggleRow
+              label={t("screenShare")}
+              value={settings.screenShare}
+              onChange={(v) => onSettingsChange({ screenShare: v })}
+            />
+          )}
           <ToggleRow
             label={t("camera")}
             value={settings.camera}

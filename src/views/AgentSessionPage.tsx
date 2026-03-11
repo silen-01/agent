@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Monitor, Video } from "lucide-react";
 import type { ILiveSession } from "../api/index.ts";
 import {
   SessionStatusBar,
@@ -286,15 +287,21 @@ function CameraPreviewPanel({
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasCamera = cameraOn && cameraStream != null;
   const hasScreen = screenSharing && screenStream != null;
-  const [viewSource, setViewSource] = useState<PreviewSource>(() =>
+  const [preferredViewSource, setPreferredViewSource] = useState<PreviewSource>(() =>
     cameraOn ? "camera" : screenSharing ? "screen" : "camera"
   );
+  const viewSource =
+    preferredViewSource === "screen" && !hasScreen && hasCamera
+      ? "camera"
+      : preferredViewSource === "camera" && !hasCamera && hasScreen
+        ? "screen"
+        : preferredViewSource;
   const currentStream = viewSource === "camera" ? cameraStream : screenStream;
-
-  useEffect(() => {
-    if (viewSource === "screen" && !hasScreen && hasCamera) setViewSource("camera");
-    if (viewSource === "camera" && !hasCamera && hasScreen) setViewSource("screen");
-  }, [viewSource, hasCamera, hasScreen]);
+  const canSwitchSources = hasCamera && hasScreen;
+  const activeSourceMeta =
+    viewSource === "camera"
+      ? { label: cameraLabel, Icon: Video }
+      : { label: screenLabel, Icon: Monitor };
 
   useEffect(() => {
     const v = videoRef.current;
@@ -305,43 +312,11 @@ function CameraPreviewPanel({
     };
   }, [currentStream]);
 
-  const showTabs = hasCamera || hasScreen;
+  const showSourceBadge = hasCamera || hasScreen;
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col bg-black rounded overflow-hidden">
-      {showTabs && (
-        <div className="shrink-0 flex border-b border-gray-700">
-          <button
-            type="button"
-            onClick={() => setViewSource("camera")}
-            disabled={!hasCamera}
-            className={`flex-1 px-3 py-2 text-sm font-medium transition ${
-              viewSource === "camera"
-                ? "text-white bg-gray-700"
-                : hasCamera
-                  ? "text-gray-300 hover:bg-gray-700/50"
-                  : "text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {cameraLabel}
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewSource("screen")}
-            disabled={!hasScreen}
-            className={`flex-1 px-3 py-2 text-sm font-medium transition ${
-              viewSource === "screen"
-                ? "text-white bg-gray-700"
-                : hasScreen
-                  ? "text-gray-300 hover:bg-gray-700/50"
-                  : "text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {screenLabel}
-          </button>
-        </div>
-      )}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="relative flex-1 min-h-0 flex flex-col">
         {currentStream != null ? (
           <video
             ref={videoRef}
@@ -353,6 +328,45 @@ function CameraPreviewPanel({
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">{loadingLabel}</div>
+        )}
+        {showSourceBadge && (
+          <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3">
+            {canSwitchSources ? (
+              <div className="pointer-events-auto inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/55 p-1 shadow-lg backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => setPreferredViewSource("camera")}
+                  aria-pressed={viewSource === "camera"}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition sm:text-sm ${
+                    viewSource === "camera"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-white/75 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <Video size={14} className="shrink-0" />
+                  <span>{cameraLabel}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreferredViewSource("screen")}
+                  aria-pressed={viewSource === "screen"}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition sm:text-sm ${
+                    viewSource === "screen"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-white/75 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <Monitor size={14} className="shrink-0" />
+                  <span>{screenLabel}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-xs font-medium text-white/85 shadow-lg backdrop-blur-md sm:text-sm">
+                <activeSourceMeta.Icon size={14} className="shrink-0" />
+                <span>{activeSourceMeta.label}</span>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -418,10 +432,11 @@ const AgentSessionContent = ({
     initialCameraOn,
     onMicError: effectiveOnMicError ?? (() => {}),
   });
+  const { cameraOn, screenSharing, setCameraVisible } = sessionState;
 
   useEffect(() => {
-    if (!sessionState.cameraOn && !sessionState.screenSharing) sessionState.setCameraVisible(false);
-  }, [sessionState.cameraOn, sessionState.screenSharing, sessionState.setCameraVisible]);
+    if (!cameraOn && !screenSharing) setCameraVisible(false);
+  }, [cameraOn, screenSharing, setCameraVisible]);
 
   return (
     <div className={`flex-1 flex flex-col min-h-0 relative ${isRouteMode ? "session-page-in" : ""}`}>
@@ -508,6 +523,7 @@ const AgentSessionContent = ({
       <SessionToolbar
         micOn={sessionState.micOn}
         micLevelPercent={sessionState.micLevelPercent}
+        showScreenShareButton={sessionState.screenShareAvailable}
         screenSharing={sessionState.screenSharing}
         cameraOn={sessionState.cameraOn}
         onMicToggle={() => {
@@ -539,9 +555,14 @@ const AgentSessionContent = ({
           onDialogTabToggle={sessionState.onDialogTabToggle}
           onMemoryTabToggle={sessionState.onMemoryTabToggle}
           onCameraTabToggle={sessionState.onCameraTabToggle}
-          screenCaptureSettings={sessionState.screenCaptureSettings}
-          onScreenCaptureSettingsChange={(patch) =>
-            sessionState.setScreenCaptureSettings((prev) => ({ ...prev, ...patch }))
+          screenCaptureSettings={
+            sessionState.screenShareAvailable ? sessionState.screenCaptureSettings : undefined
+          }
+          onScreenCaptureSettingsChange={
+            sessionState.screenShareAvailable
+              ? (patch) =>
+                  sessionState.setScreenCaptureSettings((prev) => ({ ...prev, ...patch }))
+              : undefined
           }
           cameraCaptureSettings={sessionState.cameraCaptureSettings}
           onCameraCaptureSettingsChange={(patch) =>

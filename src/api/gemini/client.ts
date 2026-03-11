@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality, type LiveServerMessage } from "@google/genai";
+import { GoogleGenAI, Modality, MediaResolution, type LiveServerMessage } from "@google/genai";
 import type {
   ILiveClient,
   ILiveSession,
@@ -29,12 +29,26 @@ export class GeminiLiveClient implements ILiveClient {
         onclose: callbacks.onclose,
         onerror: callbacks.onerror,
         onmessage: (message: LiveServerMessage) => {
+          if (message.sessionResumptionUpdate?.resumable && message.sessionResumptionUpdate.newHandle) {
+            callbacks.onSessionResumptionUpdate?.({
+              newHandle: message.sessionResumptionUpdate.newHandle,
+              resumable: message.sessionResumptionUpdate.resumable,
+            });
+          }
           callbacks.onmessage?.(this.mapToPayload(message));
         },
       },
       config: {
         responseModalities: [Modality.AUDIO],
         systemInstruction: config.systemInstruction,
+        mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
+        contextWindowCompression: {
+          triggerTokens: "25000",
+          slidingWindow: { targetTokens: "12500" },
+        },
+        sessionResumption: config.resumptionHandle
+          ? { handle: config.resumptionHandle }
+          : {},
         ...(config.voiceName && {
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: config.voiceName } },
@@ -42,6 +56,7 @@ export class GeminiLiveClient implements ILiveClient {
         }),
         inputAudioTranscription: {},
         outputAudioTranscription: {},
+        tools: [{ googleSearch: {} }],
       },
     });
 

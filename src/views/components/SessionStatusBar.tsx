@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Wifi, Brain, MessageSquare, BookOpen, Volume2, Mic, Monitor, Video } from "lucide-react";
 import { language, constants } from "@modules";
 import type { ScreenCaptureSettings, CameraCaptureSettings } from "../hooks/useAgentSession";
+import { isLikelyPhoneDevice } from "../screenShareSupport.ts";
 
 /** Усиление микрофона: 0.5–4 (в UI показывается как 50–400%) */
 export const MIC_SENSITIVITY_MIN = 50;
@@ -64,13 +65,42 @@ export const SessionStatusBar = ({
   const [showMicSlider, setShowMicSlider] = useState(false);
   const [showScreenCapturePanel, setShowScreenCapturePanel] = useState(false);
   const [showCameraCapturePanel, setShowCameraCapturePanel] = useState(false);
+  const [showConnectionStatusPanel, setShowConnectionStatusPanel] = useState(false);
+  const [showNetworkStatusPanel, setShowNetworkStatusPanel] = useState(false);
   const volumeRef = useRef<HTMLDivElement>(null);
   const micRef = useRef<HTMLDivElement>(null);
   const screenCaptureRef = useRef<HTMLDivElement>(null);
   const cameraCaptureRef = useRef<HTMLDivElement>(null);
+  const connectionStatusRef = useRef<HTMLDivElement>(null);
+  const networkStatusRef = useRef<HTMLDivElement>(null);
   const presets = constants.session.screenCapturePresets;
 
   const micSensitivityPercent = Math.round(micSensitivity * 100);
+  const isPhoneDevice = isLikelyPhoneDevice();
+  const connectionStatusLabel =
+    connectionStatus === "connected"
+      ? t("sessionStatusAiConnected")
+      : connectionStatus === "reconnecting"
+        ? t("sessionStatusAiReconnecting")
+        : t("sessionStatusAiDisconnected");
+  const connectionStatusColorClass =
+    connectionStatus === "connected"
+      ? "text-blue-400"
+      : connectionStatus === "reconnecting"
+        ? "text-amber-400"
+        : "text-red-400";
+  const networkStatusColorClass =
+    networkLoadPercent <= 33
+      ? "text-emerald-400"
+      : networkLoadPercent <= 66
+        ? "text-amber-400"
+        : "text-red-400";
+  const networkStatusFillClass =
+    networkLoadPercent <= 33
+      ? "bg-emerald-400"
+      : networkLoadPercent <= 66
+        ? "bg-amber-400"
+        : "bg-red-400";
 
   useEffect(() => {
     if (!showVolumeSlider) return;
@@ -116,6 +146,31 @@ export const SessionStatusBar = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showCameraCapturePanel]);
 
+  useEffect(() => {
+    if (!showConnectionStatusPanel) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        connectionStatusRef.current &&
+        !connectionStatusRef.current.contains(e.target as Node)
+      ) {
+        setShowConnectionStatusPanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showConnectionStatusPanel]);
+
+  useEffect(() => {
+    if (!showNetworkStatusPanel) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (networkStatusRef.current && !networkStatusRef.current.contains(e.target as Node)) {
+        setShowNetworkStatusPanel(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showNetworkStatusPanel]);
+
   const currentPresetId =
     screenCaptureSettings && presets.find((p) => p.width === screenCaptureSettings.width && p.height === screenCaptureSettings.height)
       ? `${screenCaptureSettings.width}x${screenCaptureSettings.height}`
@@ -125,10 +180,11 @@ export const SessionStatusBar = ({
     cameraCaptureSettings && presets.find((p) => p.width === cameraCaptureSettings.width && p.height === cameraCaptureSettings.height)
       ? `${cameraCaptureSettings.width}x${cameraCaptureSettings.height}`
       : presets[0]?.id ?? "640x360";
+  const showCameraTab = showPreviewTab && onCameraTabToggle != null;
 
   return (
-    <div className="shrink-0 relative flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-[#111827] border border-gray-700">
-      <div className="flex items-center justify-center gap-2 min-w-0 flex-1 sm:justify-start">
+    <div className="shrink-0 relative flex flex-col gap-2 px-3 pt-2 pb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 sm:py-2.5 rounded-xl bg-[#111827] border border-gray-700">
+      <div className="flex items-center justify-center gap-2 min-w-0 sm:flex-1 sm:justify-start">
         <div className="flex items-center justify-center gap-2 sm:gap-4 min-w-0">
         {onAiVolumeChange != null && (
           <div className="relative shrink-0" ref={volumeRef}>
@@ -205,9 +261,38 @@ export const SessionStatusBar = ({
               <Video size={20} className="sm:w-[18px] sm:h-[18px]" />
             </button>
             {showCameraCapturePanel && (
-              <div className="absolute bottom-full left-0 mb-5 rounded-xl bg-[#111827] border border-gray-700 shadow-xl z-50 p-4 w-64">
+              <div className="absolute bottom-full left-1/2 z-50 mb-5 w-[min(16rem,calc(100vw-1rem))] -translate-x-1/2 rounded-xl border border-gray-700 bg-[#111827] p-4 shadow-xl sm:left-0 sm:w-64 sm:translate-x-0">
                 <h3 className="text-sm font-semibold text-white mb-3">{t("sessionCameraCaptureTitle")}</h3>
                 <div className="space-y-3">
+                  {isPhoneDevice && (
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">{t("sessionCameraFacingTitle")}</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onCameraCaptureSettingsChange({ facingMode: "user" })}
+                          className={`rounded-lg border px-2 py-1.5 text-sm transition ${
+                            (cameraCaptureSettings.facingMode ?? "user") === "user"
+                              ? "border-blue-500 bg-blue-500/15 text-white"
+                              : "border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700/70"
+                          }`}
+                        >
+                          {t("sessionCameraFacingFront")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onCameraCaptureSettingsChange({ facingMode: "environment" })}
+                          className={`rounded-lg border px-2 py-1.5 text-sm transition ${
+                            (cameraCaptureSettings.facingMode ?? "user") === "environment"
+                              ? "border-blue-500 bg-blue-500/15 text-white"
+                              : "border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700/70"
+                          }`}
+                        >
+                          {t("sessionCameraFacingRear")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">{t("sessionScreenCaptureResolution")}</label>
                     <select
@@ -240,13 +325,13 @@ export const SessionStatusBar = ({
                   </div>
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">
-                      {t("sessionScreenCaptureFps")} — {cameraCaptureSettings.fps ?? 4}
+                      {t("sessionScreenCaptureFps")} — {cameraCaptureSettings.fps ?? 2}
                     </label>
                     <input
                       type="range"
                       min={1}
                       max={6}
-                      value={cameraCaptureSettings.fps ?? 4}
+                      value={cameraCaptureSettings.fps ?? 2}
                       onChange={(e) => onCameraCaptureSettingsChange({ fps: Number(e.target.value) })}
                       className="w-full h-2 rounded-lg appearance-none bg-gray-700 accent-blue-500"
                     />
@@ -283,7 +368,7 @@ export const SessionStatusBar = ({
               <Monitor size={20} className="sm:w-[18px] sm:h-[18px]" />
             </button>
             {showScreenCapturePanel && (
-              <div className="absolute bottom-full left-0 mb-5 rounded-xl bg-[#111827] border border-gray-700 shadow-xl z-50 p-4 w-64">
+              <div className="absolute bottom-full left-1/2 z-50 mb-5 w-[min(16rem,calc(100vw-1rem))] -translate-x-1/2 rounded-xl border border-gray-700 bg-[#111827] p-4 shadow-xl sm:left-0 sm:w-64 sm:translate-x-0">
                 <h3 className="text-sm font-semibold text-white mb-3">{t("sessionScreenCaptureTitle")}</h3>
                 <div className="space-y-3">
                   <div>
@@ -318,13 +403,13 @@ export const SessionStatusBar = ({
                   </div>
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">
-                      {t("sessionScreenCaptureFps")} — {screenCaptureSettings.fps ?? 4}
+                      {t("sessionScreenCaptureFps")} — {screenCaptureSettings.fps ?? 2}
                     </label>
                     <input
                       type="range"
                       min={1}
                       max={6}
-                      value={screenCaptureSettings.fps ?? 4}
+                      value={screenCaptureSettings.fps ?? 2}
                       onChange={(e) => onScreenCaptureSettingsChange({ fps: Number(e.target.value) })}
                       className="w-full h-2 rounded-lg appearance-none bg-gray-700 accent-blue-500"
                     />
@@ -348,57 +433,67 @@ export const SessionStatusBar = ({
             )}
           </div>
         )}
-        <div
-          className="flex items-center shrink-0"
-          title={
-            connectionStatus === "connected"
-              ? t("sessionStatusAiConnected")
-              : connectionStatus === "reconnecting"
-                ? t("sessionStatusAiReconnecting")
-                : t("sessionStatusAiDisconnected")
-          }
-          aria-label={
-            connectionStatus === "connected"
-              ? t("sessionStatusAiConnected")
-              : connectionStatus === "reconnecting"
-                ? t("sessionStatusAiReconnecting")
-                : t("sessionStatusAiDisconnected")
-          }
-        >
-          <Brain
-            size={20}
-            className={`sm:w-[18px] sm:h-[18px] ${
-              connectionStatus === "connected"
-                ? "text-blue-400"
-                : connectionStatus === "reconnecting"
-                  ? "text-amber-400"
-                  : "text-red-400"
-            }`}
-          />
+        <div className="relative shrink-0" ref={connectionStatusRef}>
+          <button
+            type="button"
+            onClick={() => {
+              setShowConnectionStatusPanel((v) => !v);
+              setShowNetworkStatusPanel(false);
+            }}
+            className="flex items-center justify-center rounded-lg p-1 text-gray-400 hover:bg-gray-700/50 transition touch-manipulation"
+            aria-label={connectionStatusLabel}
+            aria-expanded={showConnectionStatusPanel}
+          >
+            <Brain size={20} className={`sm:w-[18px] sm:h-[18px] ${connectionStatusColorClass}`} />
+          </button>
+          {showConnectionStatusPanel && (
+            <div className="absolute bottom-full left-1/2 z-50 mb-5 w-40 -translate-x-1/2 rounded-xl border border-gray-700 bg-[#111827] p-3 shadow-xl">
+              <div className="text-xs text-gray-500">{t("sessionStatusAi")}</div>
+              <div className={`mt-1 text-sm font-medium ${connectionStatusColorClass}`}>
+                {connectionStatusLabel}
+              </div>
+            </div>
+          )}
         </div>
-        <div
-          className="flex items-center shrink-0"
-          title={`${t("sessionStatusNetwork")}: ${networkLoadPercent}%`}
-          aria-label={`${t("sessionStatusNetwork")}: ${networkLoadPercent}%`}
-        >
-          <Wifi
-            size={20}
-            className={`sm:w-[18px] sm:h-[18px] ${
-              networkLoadPercent <= 33
-                ? "text-emerald-400"
-                : networkLoadPercent <= 66
-                  ? "text-amber-400"
-                  : "text-red-400"
-            }`            }
-          />
+        <div className="relative shrink-0" ref={networkStatusRef}>
+          <button
+            type="button"
+            onClick={() => {
+              setShowNetworkStatusPanel((v) => !v);
+              setShowConnectionStatusPanel(false);
+            }}
+            className="flex items-center justify-center rounded-lg p-1 text-gray-400 hover:bg-gray-700/50 transition touch-manipulation"
+            aria-label={`${t("sessionStatusNetwork")}: ${networkLoadPercent}%`}
+            aria-expanded={showNetworkStatusPanel}
+          >
+            <Wifi size={20} className={`sm:w-[18px] sm:h-[18px] ${networkStatusColorClass}`} />
+          </button>
+          {showNetworkStatusPanel && (
+            <div className="absolute bottom-full left-1/2 z-50 mb-5 w-40 -translate-x-1/2 rounded-xl border border-gray-700 bg-[#111827] p-3 shadow-xl">
+              <div className="text-xs text-gray-500">{t("sessionStatusNetwork")}</div>
+              <div className={`mt-1 text-sm font-medium tabular-nums ${networkStatusColorClass}`}>
+                {networkLoadPercent}%
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-800">
+                <div
+                  className={`h-full rounded-full transition-[width] ${networkStatusFillClass}`}
+                  style={{ width: `${networkLoadPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
         </div>
       </div>
-      <div className="flex items-center justify-center gap-1 shrink-0 order-last sm:order-none sm:absolute sm:left-1/2 sm:-translate-x-1/2">
+      <div
+        className={`grid w-full shrink-0 order-last gap-1 ${
+          showCameraTab ? "grid-cols-3" : "grid-cols-2"
+        } sm:absolute sm:left-1/2 sm:flex sm:w-auto sm:-translate-x-1/2 sm:items-center sm:justify-center`}
+      >
         <button
           type="button"
           onClick={onDialogTabToggle}
-          className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition touch-manipulation ${
+          className={`inline-flex min-w-0 items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition touch-manipulation sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm ${
             dialogVisible
               ? "text-gray-200 bg-gray-700/70"
               : "text-gray-500 hover:text-gray-300 hover:bg-gray-700/40"
@@ -406,12 +501,12 @@ export const SessionStatusBar = ({
           title={t("sessionDialogTitle")}
         >
           <MessageSquare size={18} className="shrink-0 sm:w-4 sm:h-4" />
-          <span className="truncate">{t("sessionDialogTitle")}</span>
+          <span className="truncate text-center">{t("sessionDialogTitle")}</span>
         </button>
         <button
           type="button"
           onClick={onMemoryTabToggle}
-          className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition touch-manipulation ${
+          className={`inline-flex min-w-0 items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition touch-manipulation sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm ${
             memoryVisible
               ? "text-gray-200 bg-gray-700/70"
               : "text-gray-500 hover:text-gray-300 hover:bg-gray-700/40"
@@ -419,13 +514,13 @@ export const SessionStatusBar = ({
           title={t("memoryTitle")}
         >
           <BookOpen size={18} className="shrink-0 sm:w-4 sm:h-4" />
-          <span className="truncate">{t("memoryTitle")}</span>
+          <span className="truncate text-center">{t("memoryTitle")}</span>
         </button>
-        {showPreviewTab && onCameraTabToggle != null && (
+        {showCameraTab && (
           <button
             type="button"
             onClick={onCameraTabToggle}
-            className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium transition touch-manipulation ${
+            className={`inline-flex min-w-0 items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition touch-manipulation sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm ${
               cameraVisible
                 ? "text-gray-200 bg-gray-700/70"
                 : "text-gray-500 hover:text-gray-300 hover:bg-gray-700/40"
@@ -433,7 +528,8 @@ export const SessionStatusBar = ({
             title={t("sessionCameraViewTitle")}
           >
             <Video size={18} className="shrink-0 sm:w-4 sm:h-4" />
-            <span className="truncate">{t("sessionCameraViewTitle")}</span>
+            <span className="truncate text-center sm:hidden">{t("sessionCameraViewShortTitle")}</span>
+            <span className="hidden truncate text-center sm:inline">{t("sessionCameraViewTitle")}</span>
           </button>
         )}
       </div>
@@ -443,7 +539,7 @@ export const SessionStatusBar = ({
         )}
       </div>
       {version != null && version !== "" && (
-        <span className="absolute right-2 bottom-2 text-[10px] text-gray-500 tabular-nums shrink-0 sm:hidden" aria-hidden>
+        <span className="absolute right-3 bottom-2 text-[10px] text-gray-500 tabular-nums shrink-0 sm:hidden" aria-hidden>
           v{version}
         </span>
       )}

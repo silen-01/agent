@@ -5,6 +5,7 @@ export type SessionToolbarProps = {
   micOn: boolean;
   /** 0–100, уровень микрофона для заливки иконки снизу вверх (только при micOn) */
   micLevelPercent?: number;
+  showScreenShareButton?: boolean;
   screenSharing: boolean;
   cameraOn: boolean;
   onMicToggle: () => void;
@@ -19,6 +20,7 @@ export type SessionToolbarProps = {
 export const SessionToolbar = ({
   micOn,
   micLevelPercent = 0,
+  showScreenShareButton = true,
   screenSharing,
   cameraOn,
   onMicToggle,
@@ -63,18 +65,20 @@ export const SessionToolbar = ({
           <MicOff size={22} />
         )}
       </button>
-      <button
-        type="button"
-        onClick={onScreenShareToggle}
-        className={`flex items-center justify-center p-3 rounded-xl border transition-colors size-[46px] ${
-          screenSharing
-            ? "border-gray-600 bg-gray-700/50 hover:bg-gray-700 text-white"
-            : "border-blue-500/50 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
-        }`}
-        title={screenSharing ? t("sessionToolbarStopShare") : t("sessionToolbarShareScreen")}
-      >
-        {screenSharing ? <Monitor size={22} /> : <MonitorOff size={22} />}
-      </button>
+      {showScreenShareButton && (
+        <button
+          type="button"
+          onClick={onScreenShareToggle}
+          className={`flex items-center justify-center p-3 rounded-xl border transition-colors size-[46px] ${
+            screenSharing
+              ? "border-gray-600 bg-gray-700/50 hover:bg-gray-700 text-white"
+              : "border-blue-500/50 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30"
+          }`}
+          title={screenSharing ? t("sessionToolbarStopShare") : t("sessionToolbarShareScreen")}
+        >
+          {screenSharing ? <Monitor size={22} /> : <MonitorOff size={22} />}
+        </button>
+      )}
       <button
         type="button"
         onClick={onCameraToggle}

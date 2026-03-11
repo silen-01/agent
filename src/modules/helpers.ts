@@ -139,6 +139,8 @@ export const buildSystemInstruction = (
     parts.push(memoryProactive);
   }
 
+  parts.push(t("sysInstructionSystemEvents"));
+
   const toneKey = `sysInstructionTone${settings.tone.charAt(0).toUpperCase() + settings.tone.slice(1)}` as TranslationKey;
   const toneLine =
     (settings.tone === "friendly"

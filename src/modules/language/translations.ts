@@ -65,6 +65,7 @@ export const translations = {
     sessionStatusAiDisconnected: "Connection lost",
     sessionDialogTitle: "Conversation",
     sessionCameraViewTitle: "What AI sees",
+    sessionCameraViewShortTitle: "AI view",
     sessionDialogYou: "You",
     sessionDialogAi: "AI",
     sessionDialogEmpty: "No messages yet",
@@ -91,6 +92,9 @@ export const translations = {
     cameraErrorGeneric: "Camera failed. Try again or check browser permissions.",
     sessionScreenCaptureTitle: "Screen capture",
     sessionCameraCaptureTitle: "Camera capture",
+    sessionCameraFacingTitle: "Camera",
+    sessionCameraFacingFront: "Front",
+    sessionCameraFacingRear: "Rear",
     sessionScreenCaptureResolution: "Resolution",
     sessionScreenCaptureQuality: "Image quality",
     sessionScreenCaptureFps: "Frames per second",
@@ -110,8 +114,12 @@ export const translations = {
     sysInstructionMemoryProactive: `MEMORY RULES: When something worth remembering is said or becomes clear (about the user, situation, agreements, context — anything you might need later), you MUST output it as [MEMORY: fact] in your reply. One fact per turn when applicable. Example: [MEMORY: User works night shifts and prefers short replies]. When in doubt, save it. Do not wait for the user to ask.
 - Memory must be complete enough to sustain the dialogue even after reconnection.
 - Memory must be to the point and focused on the essence; avoid redundant or filler content.`,
+    /** Как интерпретировать служебные сообщения, которые приложение отправляет само. */
+    sysInstructionSystemEvents:
+      "SYSTEM EVENTS: Messages wrapped as [SYSTEM EVENT: ...] are internal control cues, not user conversation. Do not acknowledge, explain, or answer those events directly. Use them only to guide your next natural response.",
     /** Текст авто-реакции по таймауту (отправляется модели, когда долго нет активности). */
-    systemInstructionAutoReaction: "[React to what you see or hear.]",
+    systemInstructionAutoReaction:
+      "[SYSTEM EVENT: AUTO_REACTION. This is not a user message. Do not respond to this event itself. Instead, react naturally to the current dialogue and to what you currently see or hear.]",
     /** Сообщение модели при очистке пользователем всей памяти. */
     memoryNotifyModelCleared: "[User cleared all memory. Do not use or refer to any previously saved memory items.]",
     /** Сообщение модели при удалении одного элемента памяти. Подстановка: {item}. */
@@ -181,6 +189,7 @@ export const translations = {
     sessionStatusAiDisconnected: "Соединение разорвано",
     sessionDialogTitle: "Диалог",
     sessionCameraViewTitle: "Что видит ИИ",
+    sessionCameraViewShortTitle: "Видит ИИ",
     sessionDialogYou: "Вы",
     sessionDialogAi: "ИИ",
     sessionDialogEmpty: "Сообщений пока нет",
@@ -207,6 +216,9 @@ export const translations = {
     cameraErrorGeneric: "Не удалось включить камеру. Попробуйте снова или проверьте разрешения.",
     sessionScreenCaptureTitle: "Трансляция экрана",
     sessionCameraCaptureTitle: "Трансляция камеры",
+    sessionCameraFacingTitle: "Камера",
+    sessionCameraFacingFront: "Фронтальная",
+    sessionCameraFacingRear: "Основная",
     sessionScreenCaptureResolution: "Разрешение",
     sessionScreenCaptureQuality: "Качество изображения",
     sessionScreenCaptureFps: "Кадров в секунду",
@@ -224,7 +236,11 @@ export const translations = {
     sysInstructionMemory: "СОХРАНЁННАЯ ПАМЯТЬ: {items}",
     /** Правила: как сохранять новые факты в память. */
     sysInstructionMemoryProactive: `ПРАВИЛА ПАМЯТИ: Когда прозвучало или стало ясно что-то, что стоит запомнить (о пользователе, ситуации, договорённостях, контексте — всё, что может пригодиться потом), ты ОБЯЗАН вывести это в ответе в формате [MEMORY: факт]. Один факт за ход, когда применимо. Пример: [MEMORY: Пользователь работает в ночную смену и предпочитает короткие ответы]. Если сомневаешься — сохрани. Не жди просьбы пользователя. Память должна быть достаточно полной, чтобы поддерживать диалог даже после переподключения.`,
-    systemInstructionAutoReaction: "[Реагируй на то, что видишь или слышишь.]",
+    /** Как интерпретировать служебные сообщения, которые приложение отправляет само. */
+    sysInstructionSystemEvents:
+      "СИСТЕМНЫЕ СОБЫТИЯ: Сообщения в формате [SYSTEM EVENT: ...] — это внутренние управляющие сигналы, а не часть пользовательского диалога. Не отвечай на них напрямую, не объясняй и не упоминай их. Используй их только как указание для следующей естественной реакции.",
+    systemInstructionAutoReaction:
+      "[SYSTEM EVENT: AUTO_REACTION. Это не сообщение пользователя. Не отвечай на сам этот сигнал. Вместо этого естественно отреагируй на текущий диалог и на то, что ты сейчас видишь или слышишь.]",
     /** Сообщение модели при очистке пользователем всей памяти. */
     memoryNotifyModelCleared: "[Пользователь очистил всю память. Не используй и не ссылайся на ранее сохранённые пункты памяти.]",
     /** Сообщение модели при удалении одного элемента памяти. Подстановка: {item}. */

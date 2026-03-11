@@ -8,7 +8,8 @@ const NETWORK_LOAD_SCALE_BYTES_PER_SEC = 1048576;
 const NETWORK_LOAD_FLOOR_BYTES_PER_SEC = 32768;
 const RECONNECT_DELAY_MS = 2000;
 const RECONNECT_MAX_ATTEMPTS = 5;
-const READY_FALLBACK_MS = 12000;
+const DEFAULT_AUTO_REACTION_TEXT =
+  "[SYSTEM EVENT: AUTO_REACTION. This is not a user message. Do not respond to this event itself. Instead, react naturally to the current dialogue and to what you currently see or hear.]";
 
 const LOG_PREFIX = "[LiveSession]";
 function log(msg: string, ...args: unknown[]) {
@@ -64,36 +65,41 @@ export function useLiveSessionConnection({
   const bytesSentInWindowRef = useRef(0);
   const bytesReceivedInWindowRef = useRef(0);
   const sessionRef = useRef<ILiveSession | null>(null);
+  const publicSessionRef = useRef<ILiveSession | null>(null);
   const lastLaunchParamsRef = useRef<LastLaunchParams | null>(null);
   const reconnectDisabledRef = useRef(false);
   const reconnectAttemptRef = useRef(0);
   const firstMessageReceivedRef = useRef(false);
-  const readyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastModelActivityRef = useRef(0);
   const reactionTimeoutSecondsRef = useRef(30);
+  const resumptionHandleRef = useRef<string | null>(null);
+
+  const getPublicSession = useCallback((): ILiveSession => {
+    if (publicSessionRef.current) return publicSessionRef.current;
+    publicSessionRef.current = {
+      sendRealtimeInput(payload) {
+        const currentSession = sessionRef.current;
+        if (!currentSession) {
+          throw new Error("Live session is not connected");
+        }
+        currentSession.sendRealtimeInput(payload);
+      },
+      close() {
+        sessionRef.current?.close();
+      },
+    };
+    return publicSessionRef.current;
+  }, []);
 
   const markSessionReady = useCallback(() => {
     if (firstMessageReceivedRef.current) return;
     firstMessageReceivedRef.current = true;
-    log("session ready (first message or fallback)");
-    if (readyTimeoutRef.current) {
-      clearTimeout(readyTimeoutRef.current);
-      readyTimeoutRef.current = null;
-    }
+    log("session ready");
     reconnectAttemptRef.current = 0;
     setSessionReady(true);
     setIsConnecting(false);
   }, []);
-
-  const scheduleReadyFallback = useCallback(() => {
-    firstMessageReceivedRef.current = false;
-    if (readyTimeoutRef.current) clearTimeout(readyTimeoutRef.current);
-    readyTimeoutRef.current = setTimeout(() => {
-      readyTimeoutRef.current = null;
-      markSessionReady();
-    }, READY_FALLBACK_MS);
-  }, [markSessionReady]);
 
   const scheduleReconnect = useCallback((callback: () => void, delay: number) => {
     if (reconnectTimerRef.current) {
@@ -151,10 +157,6 @@ export function useLiveSessionConnection({
         setIsConnecting(false);
         return;
       }
-      if (readyTimeoutRef.current) {
-        clearTimeout(readyTimeoutRef.current);
-        readyTimeoutRef.current = null;
-      }
       firstMessageReceivedRef.current = false;
       log("tryReconnect: connect() start");
       const systemInstruction = resolveSystemInstruction(params);
@@ -165,12 +167,20 @@ export function useLiveSessionConnection({
         .connect({
           systemInstruction: systemInstruction || "You are a helpful assistant.",
           ...(params.voiceName && { voiceName: params.voiceName }),
+          ...(resumptionHandleRef.current && { resumptionHandle: resumptionHandleRef.current }),
           callbacks: {
+            onSessionResumptionUpdate: (u) => {
+              if (u.newHandle) {
+                resumptionHandleRef.current = u.newHandle;
+                log("tryReconnect: sessionResumptionUpdate handle stored");
+              }
+            },
             onopen: () => {
               log("tryReconnect onopen");
             },
             onclose: (e) => {
               log("tryReconnect onclose", "code:", e?.code, "reason:", e?.reason);
+              firstMessageReceivedRef.current = false;
               setSessionReady(false);
               try {
                 sessionRef.current?.close();
@@ -184,6 +194,7 @@ export function useLiveSessionConnection({
                 lastLaunchParamsRef.current.showToast(msg);
                 reconnectDisabledRef.current = true;
                 setIsConnecting(false);
+                setSession(null);
                 return;
               }
               if (!reconnectDisabledRef.current && lastLaunchParamsRef.current) {
@@ -199,6 +210,7 @@ export function useLiveSessionConnection({
             },
             onerror: (err) => {
               console.error("Live session error:", err);
+              firstMessageReceivedRef.current = false;
               setSessionReady(false);
               try {
                 sessionRef.current?.close();
@@ -224,10 +236,10 @@ export function useLiveSessionConnection({
           log("tryReconnect: connect() resolved");
           const wrapped = wrapSession(rawSession);
           sessionRef.current = wrapped;
-          setSession(wrapped);
+          setSession(getPublicSession());
           setHasHadSession(true);
           onSessionRestored?.();
-          scheduleReadyFallback();
+          markSessionReady();
         })
         .catch((err) => {
           log("tryReconnect: connect() failed", err);
@@ -249,7 +261,7 @@ export function useLiveSessionConnection({
         });
     };
     doConnect();
-  }, [scheduleReadyFallback, scheduleReconnect, handleMessageRef, wrapSession, onSessionRestored]);
+  }, [getPublicSession, markSessionReady, scheduleReconnect, handleMessageRef, wrapSession, onSessionRestored]);
 
   useEffect(() => {
     tryReconnectRef.current = tryReconnect;
@@ -284,6 +296,7 @@ export function useLiveSessionConnection({
       sessionRef.current?.close();
       sessionRef.current = null;
       setSession(null);
+      resumptionHandleRef.current = null;
 
       const apiKey = (await getGeminiApiKey())?.trim() ?? "";
       if (!apiKey) {
@@ -299,7 +312,7 @@ export function useLiveSessionConnection({
         t,
         showToast,
         voiceName,
-        autoReactionText: autoReactionText ?? "[React to what you see or hear.]",
+        autoReactionText: autoReactionText ?? DEFAULT_AUTO_REACTION_TEXT,
       };
       lastLaunchParamsRef.current = params;
 
@@ -312,11 +325,18 @@ export function useLiveSessionConnection({
           systemInstruction,
           ...(voiceName && { voiceName }),
           callbacks: {
+            onSessionResumptionUpdate: (u) => {
+              if (u.newHandle) {
+                resumptionHandleRef.current = u.newHandle;
+                log("sessionResumptionUpdate: handle stored");
+              }
+            },
             onopen: () => {
               log("onopen (initial connect)");
             },
             onclose: (e) => {
               log("onclose (socket closed)", "code:", e?.code, "reason:", e?.reason);
+              firstMessageReceivedRef.current = false;
               setSessionReady(false);
               try {
                 sessionRef.current?.close();
@@ -330,6 +350,7 @@ export function useLiveSessionConnection({
                 params.showToast(msg);
                 reconnectDisabledRef.current = true;
                 setIsConnecting(false);
+                setSession(null);
                 return;
               }
               if (!reconnectDisabledRef.current) {
@@ -341,6 +362,7 @@ export function useLiveSessionConnection({
             onerror: (err) => {
               log("onerror", err);
               console.error("Live session error:", err);
+              firstMessageReceivedRef.current = false;
               setSessionReady(false);
               try {
                 sessionRef.current?.close();
@@ -361,9 +383,9 @@ export function useLiveSessionConnection({
         log("launch: connect() resolved, session set");
         const wrappedSession = wrapSession(rawSession);
         sessionRef.current = wrappedSession;
-        setSession(wrappedSession);
+        setSession(getPublicSession());
         setHasHadSession(true);
-        scheduleReadyFallback();
+        markSessionReady();
       } catch (err) {
         console.error("Connect failed:", err);
         const msg = t("connectionErrorGeneric");
@@ -372,19 +394,17 @@ export function useLiveSessionConnection({
         setIsConnecting(false);
       }
     },
-    [tryReconnect, scheduleReadyFallback, scheduleReconnect, handleMessageRef, wrapSession]
+    [getPublicSession, markSessionReady, tryReconnect, scheduleReconnect, handleMessageRef, wrapSession]
   );
 
   const disconnect = useCallback(() => {
     reconnectDisabledRef.current = true;
     lastLaunchParamsRef.current = null;
+    resumptionHandleRef.current = null;
+    firstMessageReceivedRef.current = false;
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
-    }
-    if (readyTimeoutRef.current) {
-      clearTimeout(readyTimeoutRef.current);
-      readyTimeoutRef.current = null;
     }
     sessionRef.current?.close();
     sessionRef.current = null;
@@ -430,7 +450,7 @@ export function useLiveSessionConnection({
       const elapsed = (Date.now() - lastModelActivityRef.current) / 1000;
       if (elapsed >= reactionTimeoutSecondsRef.current) {
         try {
-          const text = lastLaunchParamsRef.current?.autoReactionText ?? "[React to what you see or hear.]";
+          const text = lastLaunchParamsRef.current?.autoReactionText ?? DEFAULT_AUTO_REACTION_TEXT;
           s.sendRealtimeInput({ text });
           lastModelActivityRef.current = Date.now();
         } catch {
@@ -456,6 +476,5 @@ export function useLiveSessionConnection({
     launch,
     disconnect,
     markSessionReady,
-    scheduleReadyFallback,
   };
 }

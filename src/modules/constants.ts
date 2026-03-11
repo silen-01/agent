@@ -28,7 +28,7 @@ export const constants = {
     defaultCameraSizePx: { width: 400, height: 225 },
     /** Трансляция экрана в ИИ (только JPEG). Значения по умолчанию; в сессии можно менять через панель настроек. */
     screenCapture: {
-      fps: 4,
+      fps: 2,
       width: 768,
       height: 432,
       jpegQuality: 0.7,
@@ -43,11 +43,12 @@ export const constants = {
     ] as const,
     /** Трансляция камеры в ИИ (JPEG). Те же параметры, что у экрана. */
     cameraCapture: {
-      fps: 4,
+      fps: 2,
       width: 640,
       height: 360,
       jpegQuality: 0.7,
       motionThreshold: 0.03,
+      facingMode: "user",
     },
   },
   draggablePanel: {

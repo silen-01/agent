@@ -4,12 +4,15 @@ import { language } from "@modules";
 import { blobToBase64 } from "../../../api/utils/audioUtils.ts";
 
 /** Те же настройки, что и для трансляции экрана. */
+export type CameraFacingMode = "user" | "environment";
+
 export type CameraCaptureSettings = {
   width: number;
   height: number;
   jpegQuality: number;
   fps: number;
   motionThreshold: number;
+  facingMode: CameraFacingMode;
 };
 
 export type UseCameraCaptureParams = {
@@ -23,7 +26,7 @@ export type UseCameraCaptureParams = {
 
 /**
  * Захват камеры и отправка кадров в сессию ИИ (video → canvas → JPEG → sendRealtimeInput).
- * Включается при cameraOn === true и sessionReady; при ошибке доступа вызывает onError и выключает камеру.
+ * Включается при cameraOn === true; при reconnect удерживает stream и ждёт восстановления sessionReady.
  */
 export function useCameraCapture({
   session,
@@ -34,21 +37,58 @@ export function useCameraCapture({
   onError,
 }: UseCameraCaptureParams) {
   const { t } = language.useLanguage();
+  const sessionRef = useRef(session);
+  const sessionReadyRef = useRef(sessionReady);
   const onErrorRef = useRef(onError);
   const tRef = useRef(t);
   const setCameraOnRef = useRef(setCameraOn);
   const cameraCaptureSettingsRef = useRef(cameraCaptureSettings);
   useEffect(() => {
+    sessionRef.current = session;
+    sessionReadyRef.current = sessionReady;
     onErrorRef.current = onError;
     tRef.current = t;
     setCameraOnRef.current = setCameraOn;
     cameraCaptureSettingsRef.current = cameraCaptureSettings;
-  }, [onError, t, setCameraOn, cameraCaptureSettings]);
+  }, [session, sessionReady, onError, t, setCameraOn, cameraCaptureSettings]);
 
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const cameraVideoRef = useRef<HTMLVideoElement | null>(null);
   const isProcessingFrameRef = useRef(false);
+  const cameraFacingMode = cameraCaptureSettings.facingMode ?? "user";
+
+  const openCameraStream = async (facingMode: CameraFacingMode, width: number, height: number, fps: number) => {
+    const baseConstraints = {
+      width: { ideal: width },
+      height: { ideal: height },
+      frameRate: { ideal: Math.min(10, fps) },
+    } satisfies MediaTrackConstraints;
+
+    const attempts: MediaTrackConstraints[] = [
+      { ...baseConstraints, facingMode: { exact: facingMode } },
+      { ...baseConstraints, facingMode: { ideal: facingMode } },
+      baseConstraints,
+    ];
+
+    let lastError: unknown = null;
+    for (const video of attempts) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({ video });
+      } catch (err) {
+        lastError = err;
+        if (
+          err instanceof DOMException &&
+          (err.name === "NotFoundError" || err.name === "OverconstrainedError")
+        ) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw lastError;
+  };
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -73,7 +113,7 @@ export function useCameraCapture({
       }
     };
 
-    if (!session || !sessionReady || !cameraOn) {
+    if (!cameraOn) {
       cleanup();
       return;
     }
@@ -94,6 +134,11 @@ export function useCameraCapture({
       if (cancelled || !cameraVideoRef.current || isProcessingFrameRef.current) return;
       const v = cameraVideoRef.current;
       if (v.readyState < 2) {
+        scheduleNext();
+        return;
+      }
+      const currentSession = sessionRef.current;
+      if (!currentSession || !sessionReadyRef.current) {
         scheduleNext();
         return;
       }
@@ -134,9 +179,16 @@ export function useCameraCapture({
       canvas.toBlob(
         async (blob) => {
           try {
-            if (blob && !cancelled && cameraStreamRef.current) {
+            const activeSession = sessionRef.current;
+            if (
+              blob &&
+              !cancelled &&
+              cameraStreamRef.current &&
+              activeSession &&
+              sessionReadyRef.current
+            ) {
               const base64 = await blobToBase64(blob);
-              session.sendRealtimeInput({ media: { data: base64, mimeType: "image/jpeg" } });
+              activeSession.sendRealtimeInput({ media: { data: base64, mimeType: "image/jpeg" } });
             }
           } catch (e) {
             console.warn("Camera frame send failed:", e);
@@ -152,13 +204,12 @@ export function useCameraCapture({
 
     const start = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: settings().width },
-            height: { ideal: settings().height },
-            frameRate: { ideal: Math.min(10, settings().fps) },
-          },
-        });
+        const stream = await openCameraStream(
+          settings().facingMode ?? "user",
+          settings().width,
+          settings().height,
+          settings().fps
+        );
         if (cancelled) {
           stream.getTracks().forEach((tr) => tr.stop());
           return;
@@ -215,7 +266,7 @@ export function useCameraCapture({
       cancelled = true;
       cleanup();
     };
-  }, [session, sessionReady, cameraOn, cameraCaptureSettings]);
+  }, [cameraOn, cameraFacingMode]);
 
   return { cameraStream };
 }

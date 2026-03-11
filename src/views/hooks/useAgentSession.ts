@@ -65,6 +65,7 @@ export function useAgentSession({
     micOn,
     setMicOn,
     micLevelPercent: mic.micLevelPercent,
+    screenShareAvailable: screen.screenShareAvailable,
     screenSharing: screen.screenSharing,
     setScreenSharing: screen.setScreenSharing,
     screenStream: screen.screenStream,
